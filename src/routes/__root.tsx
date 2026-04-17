@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth-context";
+import { AppProvider } from "@/lib/app-context";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
@@ -27,9 +28,10 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#ffffff" },
       { title: "Finanças do Casal" },
-      { name: "description", content: "Gestão financeira para casais" },
+      { name: "description", content: "Gestão financeira simples e elegante para casais" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -55,8 +57,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
-      <Outlet />
-      <Toaster />
+      <AppProvider>
+        <div id="app-shell">
+          <Outlet />
+        </div>
+        <Toaster />
+      </AppProvider>
     </AuthProvider>
   );
 }
