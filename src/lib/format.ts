@@ -7,14 +7,24 @@ export function formatBRL(value: number): string {
   }).format(value);
 }
 
+export function formatBRLCompact(value: number): string {
+  if (Math.abs(value) >= 1000) {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+  return formatBRL(value);
+}
+
 /** Mascara um valor financeiro como asteriscos preservando o "R$" */
 export function maskedBRL(): string {
-  return "R$ ****";
+  return "R$ ••••";
 }
 
 /**
  * Aplica máscara DD/MM/YYYY conforme o usuário digita.
- * Aceita qualquer string e retorna o valor formatado.
  */
 export function maskDateBR(input: string): string {
   const digits = input.replace(/\D/g, "").slice(0, 8);
@@ -24,7 +34,7 @@ export function maskDateBR(input: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
-/** "DD/MM/YYYY" -> "YYYY-MM-DD" (string DATE pura, sem timezone) */
+/** "DD/MM/YYYY" -> "YYYY-MM-DD" */
 export function brToISO(br: string): string | null {
   const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return null;
@@ -36,7 +46,7 @@ export function brToISO(br: string): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** "YYYY-MM-DD" -> "DD/MM/YYYY" (sem criar Date — evita timezone) */
+/** "YYYY-MM-DD" -> "DD/MM/YYYY" */
 export function isoToBR(iso: string): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return iso;
@@ -49,13 +59,16 @@ export function addMonthsISO(iso: string, months: number): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   let year = Number(m[1]);
-  let month = Number(m[2]) + months; // 1..12 base
+  let month = Number(m[2]) + months;
   let day = Number(m[3]);
-  // normaliza
-  year += Math.floor((month - 1) / 12);
-  month = ((month - 1) % 12) + 12;
-  month = (month % 12) + 1;
-  // dia máximo do mês alvo
+  while (month > 12) {
+    month -= 12;
+    year += 1;
+  }
+  while (month < 1) {
+    month += 12;
+    year -= 1;
+  }
   const daysInMonth = new Date(year, month, 0).getDate();
   if (day > daysInMonth) day = daysInMonth;
   const mm = String(month).padStart(2, "0");
@@ -63,12 +76,19 @@ export function addMonthsISO(iso: string, months: number): string {
   return `${year}-${mm}-${dd}`;
 }
 
-/** Retorna chave "YYYY-MM" para agrupamento por mês a partir de string ISO */
+/** Diferença em dias entre 2 ISO (b - a). */
+export function diffDaysISO(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  const da = Date.UTC(ay, am - 1, ad);
+  const db = Date.UTC(by, bm - 1, bd);
+  return Math.round((db - da) / 86400000);
+}
+
 export function monthKeyFromISO(iso: string): string {
   return iso.slice(0, 7);
 }
 
-/** "YYYY-MM" -> "Abril 2026" */
 export function monthLabel(key: string): string {
   const [y, m] = key.split("-");
   const months = [
@@ -77,6 +97,13 @@ export function monthLabel(key: string): string {
   ];
   const idx = Number(m) - 1;
   return `${months[idx] ?? m} ${y}`;
+}
+
+export function monthLabelShort(key: string): string {
+  const [y, m] = key.split("-");
+  const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const idx = Number(m) - 1;
+  return `${months[idx] ?? m}/${y.slice(2)}`;
 }
 
 /** Formata timestamp ISO -> "DD/MM/YYYY HH:mm" no fuso local */
@@ -101,4 +128,24 @@ export function todayISO(): string {
 
 export function todayBR(): string {
   return isoToBR(todayISO());
+}
+
+export function startOfWeekISO(): string {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function endOfWeekISO(): string {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() + (6 - day));
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }

@@ -34,32 +34,42 @@ function AuthPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/onboarding` },
-    });
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success("Conta criada! Você já pode entrar.");
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+      });
+      if (error) throw error;
+      toast.success("Conta criada! Confirme o email se necessário e entre.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar conta");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) toast.error(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao entrar");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="flex min-h-svh items-center justify-center p-5">
       <Card className="w-full border-0 shadow-none bg-transparent">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Heart className="h-7 w-7 text-primary" fill="currentColor" />
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[color:var(--benefit)]">
+            <Heart className="h-7 w-7 text-primary-foreground" fill="currentColor" />
           </div>
-          <CardTitle className="text-2xl">Finanças do Casal</CardTitle>
+          <CardTitle className="text-2xl">Family Finance Hub</CardTitle>
           <CardDescription>Gerenciem o dinheiro juntos, com calma.</CardDescription>
         </CardHeader>
         <CardContent>

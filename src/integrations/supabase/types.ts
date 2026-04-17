@@ -137,11 +137,66 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          family_id: string
+          id: string
+          p256dh: string
+          profile_id: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          family_id: string
+          id?: string
+          p256dh: string
+          profile_id: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          family_id?: string
+          id?: string
+          p256dh?: string
+          profile_id?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
           category_id: string | null
           created_at: string
+          created_by_id: string
           created_time: string
           date: string
           description: string
@@ -163,6 +218,7 @@ export type Database = {
           amount: number
           category_id?: string | null
           created_at?: string
+          created_by_id: string
           created_time?: string
           date: string
           description: string
@@ -184,6 +240,7 @@ export type Database = {
           amount?: number
           category_id?: string | null
           created_at?: string
+          created_by_id?: string
           created_time?: string
           date?: string
           description?: string
@@ -250,6 +307,15 @@ export type Database = {
           family_code: string
           family_id: string
           profile_id: string
+        }[]
+      }
+      create_family_with_two_profiles: {
+        Args: { _name1: string; _name2: string }
+        Returns: {
+          family_code: string
+          family_id: string
+          profile1_id: string
+          profile2_id: string
         }[]
       }
       generate_family_code: { Args: never; Returns: string }

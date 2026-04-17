@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
 import {
   clearLocalSession,
   readHideValues,
@@ -17,6 +19,11 @@ import {
   writeLocalSession,
   type LocalSession,
 } from "@/lib/local-session";
+import {
+  clearActiveProfileId,
+  readActiveProfileId,
+  writeActiveProfileId,
+} from "@/lib/active-profile";
 
 export type Profile = {
   id: string;
@@ -28,11 +35,13 @@ export type Profile = {
 
 export type Family = { id: string; code: string };
 
+export type TxType = "receita" | "despesa" | "investimento";
+
 export type Category = {
   id: string;
   family_id: string;
   name: string;
-  type: "receita" | "despesa" | "investimento";
+  type: TxType;
   sort_order: number;
 };
 
@@ -46,13 +55,14 @@ export type PaymentMethod = {
 export type Transaction = {
   id: string;
   family_id: string;
-  profile_id: string;
+  profile_id: string; // OWNER (dono da despesa/receita)
+  created_by_id: string; // AUTOR (quem inseriu de fato)
   user_id: string;
-  type: "receita" | "despesa" | "investimento";
+  type: TxType;
   description: string;
   amount: number;
   date: string; // YYYY-MM-DD
-  created_time: string; // ISO
+  created_time: string;
   category_id: string | null;
   payment_method_id: string | null;
   is_paid: boolean;
@@ -66,14 +76,21 @@ export type Transaction = {
 interface AppContextValue {
   loading: boolean;
   needsOnboarding: boolean;
-  profile: Profile | null;
+  // perfis e família
   family: Family | null;
-  members: Profile[];
+  members: Profile[]; // todos os perfis da família (1 ou 2)
+  activeProfile: Profile | null; // perfil "Netflix" selecionado no header
+  setActiveProfile: (id: string) => void;
+  // dados
   categories: Category[];
   paymentMethods: PaymentMethod[];
   transactions: Transaction[];
+  // ui
   hideValues: boolean;
   toggleHideValues: () => void;
+  // presence
+  onlineProfiles: Set<string>;
+  // actions
   refresh: () => Promise<void>;
   resetLocal: () => void;
   setLocalAfterOnboarding: (s: LocalSession) => Promise<void>;
@@ -83,17 +100,19 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [family, setFamily] = useState<Family | null>(null);
   const [members, setMembers] = useState<Profile[]>([]);
+  const [activeProfileId, setActiveProfileIdState] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
+  const [onlineProfiles, setOnlineProfiles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setHideValues(readHideValues());
+    setActiveProfileIdState(readActiveProfileId());
   }, []);
 
   const toggleHideValues = useCallback(() => {
@@ -104,12 +123,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setActiveProfile = useCallback((id: string) => {
+    writeActiveProfileId(id);
+    setActiveProfileIdState(id);
+  }, []);
+
   const loadAll = useCallback(async (familyId: string) => {
     const [memRes, catRes, pmRes, txRes, famRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("family_id", familyId),
+      supabase.from("profiles").select("*").eq("family_id", familyId).order("created_at"),
       supabase.from("categories").select("*").eq("family_id", familyId).order("sort_order"),
       supabase.from("payment_methods").select("*").eq("family_id", familyId).order("sort_order"),
-      supabase.from("transactions").select("*").eq("family_id", familyId).order("date", { ascending: false }),
+      supabase.from("transactions").select("*").eq("family_id", familyId).order("date", { ascending: false }).limit(2000),
       supabase.from("families").select("*").eq("id", familyId).maybeSingle(),
     ]);
     if (memRes.data) setMembers(memRes.data as Profile[]);
@@ -121,13 +145,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!session) return;
-    const { data: prof } = await supabase
+    const { data: profs } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-    if (!prof) {
-      setProfile(null);
+      .eq("user_id", session.user.id);
+    if (!profs || profs.length === 0) {
       setFamily(null);
       setMembers([]);
       setCategories([]);
@@ -135,33 +157,143 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTransactions([]);
       return;
     }
-    const p = prof as Profile;
-    setProfile(p);
+    const list = profs as Profile[];
+    const familyId = list[0].family_id;
+    // garante perfil ativo coerente
+    const stored = readActiveProfileId();
+    const valid = stored && list.find((p) => p.id === stored);
+    if (!valid) {
+      setActiveProfile(list[0].id);
+    }
     writeLocalSession({
-      family_id: p.family_id,
-      profile_id: p.id,
+      family_id: familyId,
+      profile_id: stored && valid ? stored : list[0].id,
       family_code: "",
-      profile_name: p.name,
+      profile_name: list[0].name,
     });
-    await loadAll(p.family_id);
-  }, [session, loadAll]);
+    await loadAll(familyId);
+  }, [session, loadAll, setActiveProfile]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!session) {
       setLoading(false);
-      setProfile(null);
       setFamily(null);
+      setMembers([]);
       return;
     }
     setLoading(true);
-    // tenta hidratar do localStorage primeiro (ux mais rápida)
     const local = readLocalSession();
     if (local) {
       loadAll(local.family_id).catch(() => {});
     }
     refresh().finally(() => setLoading(false));
   }, [session, authLoading, refresh, loadAll]);
+
+  // ============== REALTIME: transactions =================
+  const lastInsertHandledRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!family || !activeProfileId) return;
+
+    const channel = supabase
+      .channel(`tx:${family.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "transactions", filter: `family_id=eq.${family.id}` },
+        (payload) => {
+          const row = payload.new as Transaction;
+          if (lastInsertHandledRef.current.has(row.id)) return;
+          lastInsertHandledRef.current.add(row.id);
+          setTransactions((prev) => {
+            if (prev.some((t) => t.id === row.id)) return prev;
+            return [row, ...prev];
+          });
+          // Notifica somente se foi inserida POR OUTRO perfil
+          if (row.created_by_id !== activeProfileId) {
+            // resolve nomes lazily a partir do estado atual de members
+            setMembers((mem) => {
+              const author = mem.find((m) => m.id === row.created_by_id);
+              const sign = row.type === "receita" ? "+" : row.type === "despesa" ? "-" : "•";
+              const valor = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(row.amount));
+              toast(`${author?.name ?? "Parceiro(a)"} adicionou`, {
+                description: `${row.description} ${sign}${valor}`,
+              });
+              return mem;
+            });
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "transactions", filter: `family_id=eq.${family.id}` },
+        (payload) => {
+          const row = payload.new as Transaction;
+          setTransactions((prev) => prev.map((t) => (t.id === row.id ? row : t)));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "transactions", filter: `family_id=eq.${family.id}` },
+        (payload) => {
+          const old = payload.old as { id: string };
+          setTransactions((prev) => prev.filter((t) => t.id !== old.id));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [family, activeProfileId]);
+
+  // ============== REALTIME: profiles (avatars/nomes mudando) ==========
+  useEffect(() => {
+    if (!family) return;
+    const ch = supabase
+      .channel(`profiles:${family.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles", filter: `family_id=eq.${family.id}` },
+        () => {
+          supabase
+            .from("profiles")
+            .select("*")
+            .eq("family_id", family.id)
+            .order("created_at")
+            .then(({ data }) => {
+              if (data) setMembers(data as Profile[]);
+            });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [family]);
+
+  // ============== PRESENCE =====================
+  useEffect(() => {
+    if (!family || !activeProfileId) return;
+    const channel = supabase.channel(`presence:${family.id}`, {
+      config: { presence: { key: activeProfileId } },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const ids = new Set<string>(Object.keys(state));
+        setOnlineProfiles(ids);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ at: Date.now() });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [family, activeProfileId]);
 
   const setLocalAfterOnboarding = useCallback(
     async (s: LocalSession) => {
@@ -173,26 +305,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const resetLocal = useCallback(() => {
     clearLocalSession();
-    setProfile(null);
+    clearActiveProfileId();
     setFamily(null);
     setMembers([]);
+    setActiveProfileIdState(null);
     setCategories([]);
     setPaymentMethods([]);
     setTransactions([]);
   }, []);
 
+  const activeProfile = useMemo(
+    () => members.find((m) => m.id === activeProfileId) ?? members[0] ?? null,
+    [members, activeProfileId],
+  );
+
   const value = useMemo<AppContextValue>(
     () => ({
       loading: authLoading || loading,
-      needsOnboarding: !!session && !profile && !loading,
-      profile,
+      needsOnboarding: !!session && members.length === 0 && !loading,
       family,
       members,
+      activeProfile,
+      setActiveProfile,
       categories,
       paymentMethods,
       transactions,
       hideValues,
       toggleHideValues,
+      onlineProfiles,
       refresh,
       resetLocal,
       setLocalAfterOnboarding,
@@ -201,14 +341,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       authLoading,
       loading,
       session,
-      profile,
       family,
       members,
+      activeProfile,
+      setActiveProfile,
       categories,
       paymentMethods,
       transactions,
       hideValues,
       toggleHideValues,
+      onlineProfiles,
       refresh,
       resetLocal,
       setLocalAfterOnboarding,

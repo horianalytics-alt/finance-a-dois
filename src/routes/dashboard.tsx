@@ -1,45 +1,57 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useApp, type Transaction } from "@/lib/app-context";
+import { useApp } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Eye,
   EyeOff,
   Settings,
   Plus,
   Download,
-  ArrowDown,
-  ArrowUp,
   TrendingUp,
   Sparkles,
   Wallet,
-  Clock,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Activity,
+  PiggyBank,
+  Calendar,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  TrendingDown,
+  Database,
 } from "lucide-react";
 import {
   formatBRL,
+  formatBRLCompact,
   maskedBRL,
   monthKeyFromISO,
   monthLabel,
-  isoToBR,
-  formatCreatedTime,
   todayISO,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ProfileSwitcher } from "@/components/ProfileSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { TransactionCard } from "@/components/TransactionCard";
+import type { Transaction } from "@/lib/app-context";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
+type FilterMode = "all" | "receita" | "despesa" | "investimento" | string; // string = profile_id
+type SortMode = "recent" | "old" | "highest" | "lowest";
+
 function DashboardPage() {
   const { session, loading: authLoading } = useAuth();
   const {
     loading,
-    profile,
+    activeProfile,
     members,
     categories,
+    paymentMethods,
     transactions,
     hideValues,
     toggleHideValues,
@@ -53,7 +65,6 @@ function DashboardPage() {
     else if (needsOnboarding) navigate({ to: "/onboarding" });
   }, [session, authLoading, needsOnboarding, navigate]);
 
-  // organiza meses disponíveis (a partir das transações + mês atual)
   const monthKeys = useMemo(() => {
     const set = new Set<string>();
     set.add(monthKeyFromISO(todayISO()));
@@ -62,11 +73,8 @@ function DashboardPage() {
   }, [transactions]);
 
   const [activeMonth, setActiveMonth] = useState<string>(() => monthKeyFromISO(todayISO()));
-
   useEffect(() => {
-    if (!monthKeys.includes(activeMonth) && monthKeys[0]) {
-      setActiveMonth(monthKeys[0]);
-    }
+    if (!monthKeys.includes(activeMonth) && monthKeys[0]) setActiveMonth(monthKeys[0]);
   }, [monthKeys, activeMonth]);
 
   const monthTx = useMemo(
@@ -74,33 +82,86 @@ function DashboardPage() {
     [transactions, activeMonth],
   );
 
-  // Saldos (Seção 2): Benefício e Livre, considerando TODAS as transações pagas
-  const allPaid = transactions.filter((t) => t.is_paid);
-  const sumBy = (list: Transaction[], type: "receita" | "despesa", isBenefit: boolean) =>
+  // ===== 8 CARDS — calculados em CIMA do mês ativo (exceto saldos que são totais) =====
+  const sumBy = (
+    list: Transaction[],
+    type: Transaction["type"],
+    isBenefit?: boolean,
+    paid?: boolean,
+  ) =>
     list
-      .filter((t) => t.type === type && t.is_benefit === isBenefit)
+      .filter((t) => t.type === type)
+      .filter((t) => (isBenefit === undefined ? true : t.is_benefit === isBenefit))
+      .filter((t) => (paid === undefined ? true : t.is_paid === paid))
       .reduce((s, t) => s + Number(t.amount), 0);
+
+  const allPaid = transactions.filter((t) => t.is_paid);
+  const totalReceitasPagas = sumBy(allPaid, "receita");
+  const totalDespesasPagas = sumBy(allPaid, "despesa");
+  const totalInvestPagas = sumBy(allPaid, "investimento");
 
   const benefitBalance =
     sumBy(allPaid, "receita", true) - sumBy(allPaid, "despesa", true);
-  const freeBalance = sumBy(allPaid, "receita", false) - sumBy(allPaid, "despesa", false);
+  const freeBalance =
+    sumBy(allPaid, "receita", false) - sumBy(allPaid, "despesa", false);
 
-  // Contas a pagar / receber: somente NÃO pagas, separadas por caixa
-  const unpaid = transactions.filter((t) => !t.is_paid);
-  const toPayFree = unpaid
-    .filter((t) => t.type === "despesa" && !t.is_benefit)
+  const aPagar = sumBy(transactions, "despesa", undefined, false);
+  const aReceber = sumBy(transactions, "receita", undefined, false);
+
+  // Média de gastos/dia: despesas pagas dos últimos 30 dias / 30
+  const today = todayISO();
+  const thirtyDaysAgo = (() => {
+    const [y, m, d] = today.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d - 30));
+    return dt.toISOString().slice(0, 10);
+  })();
+  const last30Despesas = transactions
+    .filter((t) => t.type === "despesa" && t.is_paid && t.date >= thirtyDaysAgo && t.date <= today)
     .reduce((s, t) => s + Number(t.amount), 0);
-  const toPayBenefit = unpaid
-    .filter((t) => t.type === "despesa" && t.is_benefit)
-    .reduce((s, t) => s + Number(t.amount), 0);
-  const toReceiveFree = unpaid
-    .filter((t) => t.type === "receita" && !t.is_benefit)
-    .reduce((s, t) => s + Number(t.amount), 0);
-  const toReceiveBenefit = unpaid
-    .filter((t) => t.type === "receita" && t.is_benefit)
-    .reduce((s, t) => s + Number(t.amount), 0);
+  const avgPerDay = last30Despesas / 30;
+
+  // Runway em dias: caixa livre / média diária
+  const runwayDays = avgPerDay > 0 ? Math.floor(freeBalance / avgPerDay) : null;
+
+  // Top gastos do mês ativo por owner (profile_id)
+  const topByOwner = useMemo(() => {
+    const map = new Map<string, number>();
+    monthTx
+      .filter((t) => t.type === "despesa")
+      .forEach((t) => {
+        map.set(t.profile_id, (map.get(t.profile_id) ?? 0) + Number(t.amount));
+      });
+    const totalMonth = Array.from(map.values()).reduce((s, v) => s + v, 0);
+    return members.map((m) => ({
+      profile: m,
+      total: map.get(m.id) ?? 0,
+      pct: totalMonth > 0 ? Math.round(((map.get(m.id) ?? 0) / totalMonth) * 100) : 0,
+    }));
+  }, [monthTx, members]);
 
   const fmt = (n: number) => (hideValues ? maskedBRL() : formatBRL(n));
+  const fmtCompact = (n: number) => (hideValues ? maskedBRL() : formatBRLCompact(n));
+
+  // ===== Filtros e ordenação =====
+  const [filter, setFilter] = useState<FilterMode>("all");
+  const [sort, setSort] = useState<SortMode>("recent");
+
+  const filteredSorted = useMemo(() => {
+    let arr = monthTx.slice();
+    if (filter === "receita" || filter === "despesa" || filter === "investimento") {
+      arr = arr.filter((t) => t.type === filter);
+    } else if (filter !== "all") {
+      // profile_id
+      arr = arr.filter((t) => t.profile_id === filter);
+    }
+    arr.sort((a, b) => {
+      if (sort === "recent") return b.date.localeCompare(a.date) || b.created_time.localeCompare(a.created_time);
+      if (sort === "old") return a.date.localeCompare(b.date) || a.created_time.localeCompare(b.created_time);
+      if (sort === "highest") return Number(b.amount) - Number(a.amount);
+      return Number(a.amount) - Number(b.amount);
+    });
+    return arr;
+  }, [monthTx, filter, sort]);
 
   if (authLoading || loading) {
     return (
@@ -110,29 +171,24 @@ function DashboardPage() {
     );
   }
 
-  if (!profile) return null;
+  if (!activeProfile) return null;
 
   return (
     <div className="min-h-svh bg-background pb-32">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b bg-background/85 backdrop-blur-md">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-primary/20">
-              <AvatarImage src={profile.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary">
-                {profile.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-xs text-muted-foreground">Olá,</p>
-              <p className="font-semibold leading-tight">{profile.name}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          <ProfileSwitcher />
+          <div className="flex items-center gap-0.5">
             <Button variant="ghost" size="icon" onClick={toggleHideValues} aria-label="Ocultar valores">
               {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </Button>
+            <ThemeToggle />
+            <Link to="/data">
+              <Button variant="ghost" size="icon" aria-label="Configurações de Dados">
+                <Database className="h-5 w-5" />
+              </Button>
+            </Link>
             <Link to="/export">
               <Button variant="ghost" size="icon" aria-label="Exportar">
                 <Download className="h-5 w-5" />
@@ -147,66 +203,120 @@ function DashboardPage() {
         </div>
       </header>
 
-      <main className="space-y-5 px-5 pt-5">
-        {/* Caixas - hero cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="overflow-hidden border-0 bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md">
-            <CardContent className="space-y-2 p-4">
-              <div className="flex items-center gap-2 text-xs opacity-90">
-                <Wallet className="h-3.5 w-3.5" /> Caixa Livre
-              </div>
-              <p className="text-xl font-semibold tracking-tight">{fmt(freeBalance)}</p>
-            </CardContent>
-          </Card>
-          <Card className="overflow-hidden border-0 bg-gradient-to-br from-[var(--benefit)] to-[var(--benefit)]/70 text-[color:var(--benefit-foreground)] shadow-md">
-            <CardContent className="space-y-2 p-4">
-              <div className="flex items-center gap-2 text-xs opacity-90">
-                <Sparkles className="h-3.5 w-3.5" /> Benefícios
-              </div>
-              <p className="text-xl font-semibold tracking-tight">{fmt(benefitBalance)}</p>
-            </CardContent>
-          </Card>
+      <main className="space-y-5 px-4 pt-5">
+        {/* ============== 8 CARDS ============== */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <SummaryCard
+            label="Receitas (pagas)"
+            value={fmtCompact(totalReceitasPagas)}
+            icon={<ArrowDownCircle className="h-4 w-4" />}
+            tone="success"
+          />
+          <SummaryCard
+            label="Despesas (pagas)"
+            value={fmtCompact(totalDespesasPagas)}
+            icon={<ArrowUpCircle className="h-4 w-4" />}
+            tone="destructive"
+          />
+          <SummaryCard
+            label="Investimentos"
+            value={fmtCompact(totalInvestPagas)}
+            icon={<PiggyBank className="h-4 w-4" />}
+            tone="investment"
+          />
+          <SummaryCard
+            label="Saldo Livre"
+            value={fmt(freeBalance)}
+            icon={<Wallet className="h-4 w-4" />}
+            tone="primary"
+            highlight
+          />
+          <SummaryCard
+            label="Saldo Benefícios"
+            value={fmt(benefitBalance)}
+            icon={<Sparkles className="h-4 w-4" />}
+            tone="benefit"
+            highlight
+          />
+          <SummaryCard
+            label="A Pagar"
+            value={fmtCompact(aPagar)}
+            icon={<ArrowUpFromLine className="h-4 w-4" />}
+            tone="warning"
+          />
+          <SummaryCard
+            label="A Receber"
+            value={fmtCompact(aReceber)}
+            icon={<ArrowDownToLine className="h-4 w-4" />}
+            tone="success"
+          />
+          <SummaryCard
+            label="Média/dia (30d)"
+            value={fmtCompact(avgPerDay)}
+            icon={<Activity className="h-4 w-4" />}
+            tone="muted"
+          />
         </div>
 
-        {/* Contas a pagar/receber */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card>
-            <CardContent className="space-y-1 p-4">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ArrowDown className="h-3.5 w-3.5 text-destructive" /> A pagar
-              </div>
-              <p className="text-sm font-medium">{fmt(toPayFree)} <span className="text-xs text-muted-foreground">livre</span></p>
-              <p className="text-sm font-medium">{fmt(toPayBenefit)} <span className="text-xs text-muted-foreground">benef.</span></p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="space-y-1 p-4">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ArrowUp className="h-3.5 w-3.5 text-[color:var(--success)]" /> A receber
-              </div>
-              <p className="text-sm font-medium">{fmt(toReceiveFree)} <span className="text-xs text-muted-foreground">livre</span></p>
-              <p className="text-sm font-medium">{fmt(toReceiveBenefit)} <span className="text-xs text-muted-foreground">benef.</span></p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Membros */}
-        {members.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Família:</span>
-            <div className="flex -space-x-2">
-              {members.map((m) => (
-                <Avatar key={m.id} className="h-7 w-7 border-2 border-background">
-                  <AvatarImage src={m.avatar_url ?? undefined} />
-                  <AvatarFallback className="text-xs">{m.name.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-              ))}
+        {/* ============== RUNWAY ============== */}
+        <Card className="border-0 bg-gradient-to-br from-primary/15 via-card to-[color:var(--benefit)]/10">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <Calendar className="h-5 w-5" />
             </div>
-          </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Runway (caixa livre)</p>
+              <p className="text-base font-semibold">
+                {runwayDays === null
+                  ? "Adicione despesas pagas para calcular"
+                  : runwayDays > 365
+                    ? `${Math.floor(runwayDays / 30)} meses ou mais`
+                    : `${runwayDays} dia${runwayDays === 1 ? "" : "s"} de saldo`}
+              </p>
+              {runwayDays !== null && (
+                <p className="text-[11px] text-muted-foreground">
+                  Baseado em {fmt(avgPerDay)} de gasto médio/dia
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ============== TOP GASTOS ============== */}
+        {members.length > 1 && topByOwner.some((t) => t.total > 0) && (
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">Top gastos do mês</p>
+              </div>
+              <div className="space-y-2">
+                {topByOwner
+                  .slice()
+                  .sort((a, b) => b.total - a.total)
+                  .map((row) => (
+                    <div key={row.profile.id} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium">{row.profile.name}</span>
+                        <span className="text-muted-foreground">
+                          {fmt(row.total)} • {row.pct}%
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-[color:var(--benefit)]"
+                          style={{ width: `${row.pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Tabs de mês */}
-        <div className="-mx-5 overflow-x-auto px-5">
+        {/* ============== TABS DE MÊS ============== */}
+        <div className="-mx-4 overflow-x-auto px-4">
           <div className="flex gap-2 pb-1">
             {monthKeys.map((mk) => (
               <button
@@ -225,87 +335,89 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Lista do mês */}
-        <section className="space-y-2">
-          <h2 className="px-1 text-sm font-semibold text-muted-foreground">
-            Movimentações de {monthLabel(activeMonth)}
+        {/* ============== FILTROS RÁPIDOS ============== */}
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="flex gap-2 pb-1">
+            <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+              Todos
+            </FilterChip>
+            {members.map((m) => (
+              <FilterChip
+                key={m.id}
+                active={filter === m.id}
+                onClick={() => setFilter(m.id)}
+              >
+                {m.name}
+              </FilterChip>
+            ))}
+            <FilterChip active={filter === "receita"} onClick={() => setFilter("receita")}>
+              Receitas
+            </FilterChip>
+            <FilterChip active={filter === "despesa"} onClick={() => setFilter("despesa")}>
+              Despesas
+            </FilterChip>
+            <FilterChip
+              active={filter === "investimento"}
+              onClick={() => setFilter("investimento")}
+            >
+              Invest.
+            </FilterChip>
+          </div>
+        </div>
+
+        {/* ============== ORDENAÇÃO ============== */}
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            {filteredSorted.length} movimentação(ões)
           </h2>
-          {monthTx.length === 0 ? (
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+            className="rounded-md border border-border bg-card px-2 py-1 text-xs"
+          >
+            <option value="recent">Mais recentes</option>
+            <option value="old">Mais antigas</option>
+            <option value="highest">Maior valor</option>
+            <option value="lowest">Menor valor</option>
+          </select>
+        </div>
+
+        {/* ============== LISTA ============== */}
+        <section className="space-y-2">
+          {filteredSorted.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
                 <TrendingUp className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma movimentação neste mês.
+                  Nenhuma movimentação para esses filtros.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <ul className="space-y-2">
-              {monthTx.map((t) => {
-                const cat = categories.find((c) => c.id === t.category_id);
-                const member = members.find((m) => m.id === t.profile_id);
-                const sign = t.type === "receita" ? "+" : t.type === "despesa" ? "-" : "•";
-                const valueColor =
-                  t.type === "receita"
-                    ? "text-[color:var(--success)]"
-                    : t.type === "despesa"
-                      ? "text-destructive"
-                      : "text-[color:var(--benefit)]";
-                return (
-                  <li key={t.id}>
-                    <Card className="border-l-4" style={{
-                      borderLeftColor: t.is_benefit
-                        ? "var(--benefit)"
-                        : t.type === "receita"
-                          ? "var(--success)"
-                          : t.type === "despesa"
-                            ? "var(--destructive)"
-                            : "var(--primary)",
-                    }}>
-                      <CardContent className="p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1 space-y-0.5">
-                            <p className="truncate text-sm font-medium">{t.description}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {isoToBR(t.date)}
-                              {cat ? ` • ${cat.name}` : ""}
-                              {member ? ` • ${member.name}` : ""}
-                              {t.recurrence_months > 1
-                                ? ` • ${t.recurrence_index}/${t.recurrence_months}`
-                                : ""}
-                            </p>
-                            <p className="flex items-center gap-1 text-[10px] text-gray-400">
-                              <Clock className="h-2.5 w-2.5" />
-                              {formatCreatedTime(t.created_time)}
-                              {!t.is_paid && (
-                                <span className="ml-2 rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-medium text-[color:var(--warning-foreground)]">
-                                  Pendente
-                                </span>
-                              )}
-                              {t.is_benefit && (
-                                <span className="ml-1 rounded-full bg-[color:var(--benefit)]/15 px-1.5 py-0.5 text-[9px] font-medium text-[color:var(--benefit)]">
-                                  Benefício
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <div className={cn("text-right text-sm font-semibold", valueColor)}>
-                            {sign}
-                            {fmt(Number(t.amount))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </li>
-                );
-              })}
+              {filteredSorted.map((t) => (
+                <li key={t.id}>
+                  <TransactionCard
+                    tx={t}
+                    category={categories.find((c) => c.id === t.category_id) ?? null}
+                    pm={paymentMethods.find((p) => p.id === t.payment_method_id) ?? null}
+                    owner={members.find((m) => m.id === t.profile_id) ?? null}
+                    author={members.find((m) => m.id === t.created_by_id) ?? null}
+                    hideValues={hideValues}
+                  />
+                </li>
+              ))}
             </ul>
           )}
         </section>
       </main>
 
       {/* FAB */}
-      <Link to="/transaction/new" className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+      <Link
+        to="/transaction/new"
+        className="fixed bottom-6 right-6 z-20"
+        style={{ paddingRight: "max(0px, env(safe-area-inset-right))" }}
+      >
         <Button
           size="lg"
           className="h-14 w-14 rounded-full p-0 shadow-lg shadow-primary/30"
@@ -315,5 +427,92 @@ function DashboardPage() {
         </Button>
       </Link>
     </div>
+  );
+}
+
+// ============== COMPONENTES INTERNOS ==============
+
+type Tone = "primary" | "benefit" | "success" | "destructive" | "warning" | "investment" | "muted";
+
+function SummaryCard({
+  label,
+  value,
+  icon,
+  tone,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  tone: Tone;
+  highlight?: boolean;
+}) {
+  const toneClasses: Record<Tone, { ring: string; text: string; bg: string }> = {
+    primary: {
+      ring: "ring-primary/30",
+      text: "text-primary-foreground",
+      bg: "bg-gradient-to-br from-primary to-primary/70",
+    },
+    benefit: {
+      ring: "ring-[color:var(--benefit)]/30",
+      text: "text-[color:var(--benefit-foreground)]",
+      bg: "bg-gradient-to-br from-[color:var(--benefit)] to-[color:var(--benefit)]/70",
+    },
+    success: { ring: "", text: "text-[color:var(--success)]", bg: "" },
+    destructive: { ring: "", text: "text-destructive", bg: "" },
+    warning: { ring: "", text: "text-[color:var(--warning)]", bg: "" },
+    investment: { ring: "", text: "text-[color:var(--investment)]", bg: "" },
+    muted: { ring: "", text: "text-foreground", bg: "" },
+  };
+  const t = toneClasses[tone];
+
+  if (highlight) {
+    return (
+      <Card className={cn("overflow-hidden border-0 shadow-md", t.bg)}>
+        <CardContent className={cn("space-y-1.5 p-3", t.text)}>
+          <div className="flex items-center gap-1.5 text-[11px] opacity-90">
+            {icon}
+            {label}
+          </div>
+          <p className="text-lg font-semibold tracking-tight">{value}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-1.5 p-3">
+        <div className={cn("flex items-center gap-1.5 text-[11px] text-muted-foreground")}>
+          <span className={t.text}>{icon}</span>
+          {label}
+        </div>
+        <p className={cn("text-base font-semibold tracking-tight", t.text)}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-muted-foreground hover:bg-accent",
+      )}
+    >
+      {children}
+    </button>
   );
 }
