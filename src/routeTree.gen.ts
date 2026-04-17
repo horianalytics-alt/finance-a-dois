@@ -9,14 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ExportRouteImport } from './routes/export'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TransactionNewRouteImport } from './routes/transaction.new'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExportRoute = ExportRouteImport.update({
+  id: '/export',
+  path: '/export',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -34,48 +47,101 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransactionNewRoute = TransactionNewRouteImport.update({
+  id: '/transaction/new',
+  path: '/transaction/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/export': typeof ExportRoute
   '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
+  '/transaction/new': typeof TransactionNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/export': typeof ExportRoute
   '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
+  '/transaction/new': typeof TransactionNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/export': typeof ExportRoute
   '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
+  '/transaction/new': typeof TransactionNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/onboarding'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/export'
+    | '/onboarding'
+    | '/settings'
+    | '/transaction/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/onboarding'
-  id: '__root__' | '/' | '/auth' | '/dashboard' | '/onboarding'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/export'
+    | '/onboarding'
+    | '/settings'
+    | '/transaction/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/export'
+    | '/onboarding'
+    | '/settings'
+    | '/transaction/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  ExportRoute: typeof ExportRoute
   OnboardingRoute: typeof OnboardingRoute
+  SettingsRoute: typeof SettingsRoute
+  TransactionNewRoute: typeof TransactionNewRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/export': {
+      id: '/export'
+      path: '/export'
+      fullPath: '/export'
+      preLoaderRoute: typeof ExportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -99,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transaction/new': {
+      id: '/transaction/new'
+      path: '/transaction/new'
+      fullPath: '/transaction/new'
+      preLoaderRoute: typeof TransactionNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,8 +179,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  ExportRoute: ExportRoute,
   OnboardingRoute: OnboardingRoute,
+  SettingsRoute: SettingsRoute,
+  TransactionNewRoute: TransactionNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
