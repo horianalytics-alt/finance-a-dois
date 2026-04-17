@@ -67,9 +67,11 @@ export async function requestAndSubscribe(params: {
 
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
+    const key = urlBase64ToUint8Array(params.vapidPublicKey);
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(params.vapidPublicKey),
+      // Buffer.from converte para ArrayBuffer "pleno" (evita warning de SharedArrayBuffer)
+      applicationServerKey: key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer,
     });
   }
 

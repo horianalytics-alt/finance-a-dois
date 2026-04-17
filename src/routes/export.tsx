@@ -7,7 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Download } from "lucide-react";
 import { DateInput } from "@/components/DateInput";
-import { brToISO, isoToBR, monthLabel, todayISO } from "@/lib/format";
+import {
+  brToISO,
+  endOfWeekISO,
+  isoToBR,
+  monthLabel,
+  startOfWeekISO,
+  todayISO,
+} from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -22,36 +29,20 @@ export const Route = createFileRoute("/export")({
 
 type Mode = "month" | "week" | "range";
 
-function startOfWeekISO(): string {
-  const d = new Date();
-  const day = d.getDay(); // 0 dom .. 6 sáb
-  const diff = day; // tomamos domingo como início
-  d.setDate(d.getDate() - diff);
-  return d.toISOString().slice(0, 10);
-}
-
-function endOfWeekISO(): string {
-  const d = new Date();
-  const day = d.getDay();
-  d.setDate(d.getDate() + (6 - day));
-  return d.toISOString().slice(0, 10);
-}
-
 function escapeCsv(v: string): string {
   if (/[";\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
   return v;
 }
 
 function ExportPage() {
-  const { transactions, categories, paymentMethods, profile, loading } = useApp();
+  const { transactions, categories, paymentMethods, activeProfile, loading } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("month");
 
   useEffect(() => {
-    if (!loading && !profile) navigate({ to: "/auth" });
-  }, [loading, profile, navigate]);
+    if (!loading && !activeProfile) navigate({ to: "/auth" });
+  }, [loading, activeProfile, navigate]);
 
-  // mês
   const monthOptions = useMemo(() => {
     const set = new Set<string>();
     set.add(todayISO().slice(0, 7));
@@ -63,7 +54,6 @@ function ExportPage() {
     if (!monthOptions.includes(month) && monthOptions[0]) setMonth(monthOptions[0]);
   }, [monthOptions, month]);
 
-  // range custom
   const [from, setFrom] = useState(isoToBR(todayISO()));
   const [to, setTo] = useState(isoToBR(todayISO()));
 
@@ -98,13 +88,13 @@ function ExportPage() {
       .filter((t) => t.date >= fromIso && t.date <= toIso)
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Cabeçalho EXATO da Seção 6:
-    // data de lançamento ; coluna vazia ; tipo ; descrição/categoria ; valor ; data de pagamento ; forma de pagamento ; Pago
+    // Cabeçalho EXATO da Seção 5 (8 colunas, SEM descrição):
+    // data de lançamento | coluna vazia | tipo | categoria | valor | data de pagamento | forma de pagamento | Pago
     const header = [
       "data de lançamento",
       "",
       "tipo",
-      "descrição/categoria",
+      "categoria",
       "valor",
       "data de pagamento",
       "forma de pagamento",
@@ -113,16 +103,21 @@ function ExportPage() {
     const rows = filtered.map((t) => {
       const cat = categories.find((c) => c.id === t.category_id)?.name ?? "";
       const pm = paymentMethods.find((p) => p.id === t.payment_method_id)?.name ?? "";
-      const descCat = cat ? `${t.description} / ${cat}` : t.description;
-      // valor PT-BR (vírgula decimal) — Excel BR aceita
       const valor = Number(t.amount).toFixed(2).replace(".", ",");
+      // Regra Seção 5: data de pagamento = data efetiva, ou "pendente" se não paga,
+      // ou data de lançamento como fallback se paga sem data.
+      const dataPag = t.is_paid
+        ? t.paid_date
+          ? isoToBR(t.paid_date)
+          : isoToBR(t.date)
+        : "pendente";
       return [
         isoToBR(t.date),
         "",
         t.type,
-        descCat,
+        cat,
         valor,
-        t.paid_date ? isoToBR(t.paid_date) : "",
+        dataPag,
         pm,
         t.is_paid ? "Sim" : "Não",
       ];
@@ -135,7 +130,7 @@ function ExportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `financas_${label}.csv`;
+    a.download = `family_finance_${label}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -151,7 +146,7 @@ function ExportPage() {
         <h1 className="text-lg font-semibold">Exportar relatório</h1>
       </header>
 
-      <div className="space-y-5 px-5 pt-5">
+      <div className="space-y-5 px-4 pt-5">
         <Card>
           <CardContent className="space-y-4 p-4">
             <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
@@ -203,10 +198,15 @@ function ExportPage() {
               <Download className="mr-2 h-4 w-4" /> Baixar CSV
             </Button>
 
-            <p className="text-xs text-muted-foreground">
-              Formato CSV separado por <code className="rounded bg-muted px-1">;</code>{" "}
-              compatível com Excel.
-            </p>
+            <div className="space-y-1 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p>
+                <strong>8 colunas</strong> separadas por <code className="rounded bg-background px-1">;</code> compatível com Excel BR.
+              </p>
+              <p>
+                A coluna <em>Descrição</em> é mantida no banco mas <strong>não</strong> é exportada (Seção 5).
+              </p>
+              <p>Data de pagamento vazia em transações pagas → usa a data de lançamento. Não pagas → "pendente".</p>
+            </div>
           </CardContent>
         </Card>
       </div>

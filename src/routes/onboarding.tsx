@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useApp } from "@/lib/app-context";
+import { writeActiveProfileId } from "@/lib/active-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,44 +15,13 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
 });
 
-const DEFAULT_CATEGORIES: { name: string; type: "receita" | "despesa" | "investimento" }[] = [
-  { name: "Salário", type: "receita" },
-  { name: "Outras receitas", type: "receita" },
-  { name: "Mercado", type: "despesa" },
-  { name: "Restaurante", type: "despesa" },
-  { name: "Transporte", type: "despesa" },
-  { name: "Moradia", type: "despesa" },
-  { name: "Lazer", type: "despesa" },
-  { name: "Saúde", type: "despesa" },
-  { name: "Investimentos", type: "investimento" },
-];
-
-const DEFAULT_PMS = ["Pix", "Débito", "Crédito", "Dinheiro", "Boleto"];
-
-async function seedDefaults(familyId: string) {
-  // só semeia se vazio
-  const [{ count: catCount }, { count: pmCount }] = await Promise.all([
-    supabase.from("categories").select("id", { count: "exact", head: true }).eq("family_id", familyId),
-    supabase.from("payment_methods").select("id", { count: "exact", head: true }).eq("family_id", familyId),
-  ]);
-  if ((catCount ?? 0) === 0) {
-    await supabase.from("categories").insert(
-      DEFAULT_CATEGORIES.map((c, i) => ({ ...c, family_id: familyId, sort_order: i })),
-    );
-  }
-  if ((pmCount ?? 0) === 0) {
-    await supabase.from("payment_methods").insert(
-      DEFAULT_PMS.map((name, i) => ({ name, family_id: familyId, sort_order: i })),
-    );
-  }
-}
-
 function OnboardingPage() {
   const { session, loading: authLoading } = useAuth();
-  const { profile, loading, refresh } = useApp();
+  const { activeProfile, members, loading, refresh } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"choose" | "create" | "join">("choose");
-  const [name, setName] = useState("");
+  const [name1, setName1] = useState("");
+  const [name2, setName2] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -61,46 +31,57 @@ function OnboardingPage() {
   }, [session, authLoading, navigate]);
 
   useEffect(() => {
-    if (!loading && profile) navigate({ to: "/dashboard" });
-  }, [profile, loading, navigate]);
+    if (!loading && activeProfile && members.length > 0) navigate({ to: "/dashboard" });
+  }, [activeProfile, members.length, loading, navigate]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    setBusy(true);
-    const { data, error } = await supabase.rpc("create_family_and_profile", { _name: name.trim() });
-    if (error) {
-      setBusy(false);
-      toast.error(error.message);
+    if (!name1.trim() || !name2.trim()) {
+      toast.error("Informe o nome dos dois perfis.");
       return;
     }
-    const fam = data?.[0];
-    if (fam?.family_id) {
-      await seedDefaults(fam.family_id);
-      toast.success(`Família criada! Código: ${fam.family_code}`);
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("create_family_with_two_profiles", {
+        _name1: name1.trim(),
+        _name2: name2.trim(),
+      });
+      if (error) throw error;
+      const fam = data?.[0];
+      if (fam?.profile1_id) writeActiveProfileId(fam.profile1_id);
+      toast.success(`Família criada! Código: ${fam?.family_code}`);
+      await refresh();
+      navigate({ to: "/dashboard" });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar família.");
+    } finally {
+      setBusy(false);
     }
-    await refresh();
-    setBusy(false);
-    navigate({ to: "/dashboard" });
   };
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !code.trim()) return;
-    setBusy(true);
-    const { error } = await supabase.rpc("join_family_and_create_profile", {
-      _code: code.trim().toUpperCase(),
-      _name: name.trim(),
-    });
-    if (error) {
-      setBusy(false);
-      toast.error(error.message);
+    if (!name1.trim() || !code.trim()) {
+      toast.error("Informe nome e código.");
       return;
     }
-    toast.success("Bem-vindo(a) à família!");
-    await refresh();
-    setBusy(false);
-    navigate({ to: "/dashboard" });
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("join_family_and_create_profile", {
+        _code: code.trim().toUpperCase(),
+        _name: name1.trim(),
+      });
+      if (error) throw error;
+      const row = data?.[0];
+      if (row?.profile_id) writeActiveProfileId(row.profile_id);
+      toast.success("Bem-vindo(a) à família!");
+      await refresh();
+      navigate({ to: "/dashboard" });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao entrar.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -112,8 +93,8 @@ function OnboardingPage() {
           </div>
           <CardTitle>Vamos começar</CardTitle>
           <CardDescription>
-            {mode === "choose" && "Crie uma família ou entre com o código do seu parceiro."}
-            {mode === "create" && "Como você quer ser chamado(a)?"}
+            {mode === "choose" && "Crie a família com os dois perfis ou entre com o código."}
+            {mode === "create" && "Como vocês se chamam?"}
             {mode === "join" && "Insira o código e seu nome."}
           </CardDescription>
         </CardHeader>
@@ -142,9 +123,16 @@ function OnboardingPage() {
           {mode === "create" && (
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Seu nome</Label>
-                <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Ana" />
+                <Label htmlFor="n1">Nome do parceiro 1</Label>
+                <Input id="n1" required value={name1} onChange={(e) => setName1(e.target.value)} placeholder="Ex: Heitor" />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="n2">Nome do parceiro 2</Label>
+                <Input id="n2" required value={name2} onChange={(e) => setName2(e.target.value)} placeholder="Ex: Carol" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Você poderá alternar entre os dois perfis no header do app, estilo Netflix.
+              </p>
               <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? "Criando..." : "Criar Família"}
               </Button>
@@ -169,7 +157,7 @@ function OnboardingPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="jname">Seu nome</Label>
-                <Input id="jname" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: João" />
+                <Input id="jname" required value={name1} onChange={(e) => setName1(e.target.value)} placeholder="Ex: João" />
               </div>
               <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? "Entrando..." : "Entrar na Família"}
