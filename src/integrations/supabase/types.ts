@@ -14,55 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
-      families: {
+      categories: {
         Row: {
           created_at: string
-          created_by: string
+          family_id: string
           id: string
-          invite_code: string
           name: string
-          updated_at: string
+          sort_order: number
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
           created_at?: string
-          created_by: string
+          family_id: string
           id?: string
-          invite_code: string
           name: string
-          updated_at?: string
+          sort_order?: number
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
           created_at?: string
-          created_by?: string
+          family_id?: string
           id?: string
-          invite_code?: string
           name?: string
-          updated_at?: string
+          sort_order?: number
+          type?: Database["public"]["Enums"]["transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      families: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
         }
         Relationships: []
       }
-      family_members: {
+      payment_methods: {
         Row: {
+          created_at: string
           family_id: string
           id: string
-          joined_at: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          family_id: string
+          id: string
+          name: string
+          updated_at: string
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
+          created_at?: string
           family_id: string
           id?: string
-          joined_at?: string
+          name: string
+          updated_at?: string
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
+          created_at?: string
           family_id?: string
           id?: string
-          joined_at?: string
+          name?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "family_members_family_id_fkey"
+            foreignKeyName: "profiles_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
@@ -73,46 +140,101 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
-          category: string | null
+          category_id: string | null
           created_at: string
+          created_time: string
+          date: string
           description: string
           family_id: string
           id: string
-          occurred_on: string
+          is_benefit: boolean
+          is_paid: boolean
+          paid_date: string | null
+          payment_method_id: string | null
+          profile_id: string
+          recurrence_index: number
+          recurrence_months: number
+          recurrence_parent_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           user_id: string
         }
         Insert: {
           amount: number
-          category?: string | null
+          category_id?: string | null
           created_at?: string
+          created_time?: string
+          date: string
           description: string
           family_id: string
           id?: string
-          occurred_on?: string
+          is_benefit?: boolean
+          is_paid?: boolean
+          paid_date?: string | null
+          payment_method_id?: string | null
+          profile_id: string
+          recurrence_index?: number
+          recurrence_months?: number
+          recurrence_parent_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id: string
         }
         Update: {
           amount?: number
-          category?: string | null
+          category_id?: string | null
           created_at?: string
+          created_time?: string
+          date?: string
           description?: string
           family_id?: string
           id?: string
-          occurred_on?: string
+          is_benefit?: boolean
+          is_paid?: boolean
+          paid_date?: string | null
+          payment_method_id?: string | null
+          profile_id?: string
+          recurrence_index?: number
+          recurrence_months?: number
+          recurrence_parent_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -122,23 +244,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_family: {
+      create_family_and_profile: {
         Args: { _name: string }
         Returns: {
+          family_code: string
           family_id: string
-          invite_code: string
+          profile_id: string
         }[]
       }
-      generate_invite_code: { Args: never; Returns: string }
-      get_user_family: { Args: { _user_id: string }; Returns: string }
-      is_family_member: {
+      generate_family_code: { Args: never; Returns: string }
+      get_user_family_id: { Args: { _user_id: string }; Returns: string }
+      is_in_family: {
         Args: { _family_id: string; _user_id: string }
         Returns: boolean
       }
-      join_family_by_code: { Args: { _invite_code: string }; Returns: string }
+      join_family_and_create_profile: {
+        Args: { _code: string; _name: string }
+        Returns: {
+          family_id: string
+          profile_id: string
+        }[]
+      }
     }
     Enums: {
-      transaction_type: "income" | "expense"
+      transaction_type: "receita" | "despesa" | "investimento"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -266,7 +395,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      transaction_type: ["income", "expense"],
+      transaction_type: ["receita", "despesa", "investimento"],
     },
   },
 } as const
