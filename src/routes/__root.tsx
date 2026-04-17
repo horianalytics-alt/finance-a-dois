@@ -33,6 +33,12 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#e94f8b" },
       { title: "Family Finance Hub" },
       { name: "description", content: "Gestão financeira simples e elegante para casais" },
+      { property: "og:title", content: "Family Finance Hub" },
+      { name: "twitter:title", content: "Family Finance Hub" },
+      { property: "og:description", content: "Gestão financeira simples e elegante para casais" },
+      { name: "twitter:description", content: "Gestão financeira simples e elegante para casais" },
+      { name: "twitter:card", content: "summary" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
