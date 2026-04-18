@@ -34,6 +34,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PaletteSwitcher } from "@/components/PaletteSwitcher";
+import { MonthNavigator } from "@/components/MonthNavigator";
 import { TransactionCard } from "@/components/TransactionCard";
 import type { Transaction } from "@/lib/app-context";
 
