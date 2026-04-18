@@ -24,6 +24,7 @@ import {
   readActiveProfileId,
   writeActiveProfileId,
 } from "@/lib/active-profile";
+import { playPartner } from "@/lib/sounds";
 
 export type Profile = {
   id: string;
@@ -31,6 +32,7 @@ export type Profile = {
   family_id: string;
   name: string;
   avatar_url: string | null;
+  settings?: Record<string, unknown> | null;
 };
 
 export type Family = { id: string; code: string };
@@ -55,13 +57,13 @@ export type PaymentMethod = {
 export type Transaction = {
   id: string;
   family_id: string;
-  profile_id: string; // OWNER (dono da despesa/receita)
-  created_by_id: string; // AUTOR (quem inseriu de fato)
+  profile_id: string; // OWNER
+  created_by_id: string; // AUTOR
   user_id: string;
   type: TxType;
   description: string;
   amount: number;
-  date: string; // YYYY-MM-DD
+  date: string;
   created_time: string;
   category_id: string | null;
   payment_method_id: string | null;
@@ -76,27 +78,27 @@ export type Transaction = {
 interface AppContextValue {
   loading: boolean;
   needsOnboarding: boolean;
-  // perfis e família
   family: Family | null;
-  members: Profile[]; // todos os perfis da família (1 ou 2)
-  activeProfile: Profile | null; // perfil "Netflix" selecionado no header
+  members: Profile[];
+  activeProfile: Profile | null;
   setActiveProfile: (id: string) => void;
-  // dados
   categories: Category[];
   paymentMethods: PaymentMethod[];
   transactions: Transaction[];
-  // ui
   hideValues: boolean;
   toggleHideValues: () => void;
-  // presence
   onlineProfiles: Set<string>;
-  // actions
+  /** IDs de transações inseridas via realtime que ainda estão "novas" (badge amarelo) */
+  newTxIds: Set<string>;
+  acknowledgeNewTx: (id?: string) => void;
   refresh: () => Promise<void>;
   resetLocal: () => void;
   setLocalAfterOnboarding: (s: LocalSession) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
+
+const NEW_TX_TTL_MS = 5000;
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session, loading: authLoading } = useAuth();
@@ -109,6 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
   const [onlineProfiles, setOnlineProfiles] = useState<Set<string>>(new Set());
+  const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setHideValues(readHideValues());
@@ -126,6 +129,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setActiveProfile = useCallback((id: string) => {
     writeActiveProfileId(id);
     setActiveProfileIdState(id);
+  }, []);
+
+  const acknowledgeNewTx = useCallback((id?: string) => {
+    setNewTxIds((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(prev);
+      if (id) next.delete(id);
+      else next.clear();
+      return next;
+    });
   }, []);
 
   const loadAll = useCallback(async (familyId: string) => {
@@ -148,7 +161,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data: profs } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", session.user.id);
+      .eq("user_id", session.user.id)
+      .order("created_at");
     if (!profs || profs.length === 0) {
       setFamily(null);
       setMembers([]);
@@ -159,12 +173,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const list = profs as Profile[];
     const familyId = list[0].family_id;
-    // garante perfil ativo coerente
     const stored = readActiveProfileId();
     const valid = stored && list.find((p) => p.id === stored);
-    if (!valid) {
-      setActiveProfile(list[0].id);
-    }
+    if (!valid) setActiveProfile(list[0].id);
     writeLocalSession({
       family_id: familyId,
       profile_id: stored && valid ? stored : list[0].id,
@@ -184,17 +195,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true);
     const local = readLocalSession();
-    if (local) {
-      loadAll(local.family_id).catch(() => {});
-    }
+    if (local) loadAll(local.family_id).catch(() => {});
     refresh().finally(() => setLoading(false));
   }, [session, authLoading, refresh, loadAll]);
 
-  // ============== REALTIME: transactions =================
+  // ================ REALTIME: transactions ====================
   const lastInsertHandledRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!family || !activeProfileId) return;
-
     const channel = supabase
       .channel(`tx:${family.id}`)
       .on(
@@ -204,17 +212,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const row = payload.new as Transaction;
           if (lastInsertHandledRef.current.has(row.id)) return;
           lastInsertHandledRef.current.add(row.id);
-          setTransactions((prev) => {
-            if (prev.some((t) => t.id === row.id)) return prev;
-            return [row, ...prev];
-          });
-          // Notifica somente se foi inserida POR OUTRO perfil
+          setTransactions((prev) => (prev.some((t) => t.id === row.id) ? prev : [row, ...prev]));
+          // Notifica somente se foi inserida POR OUTRO perfil (autor != ativo)
           if (row.created_by_id !== activeProfileId) {
-            // resolve nomes lazily a partir do estado atual de members
+            // marca como "novo" e dispara expiração
+            setNewTxIds((s) => {
+              const next = new Set(s);
+              next.add(row.id);
+              return next;
+            });
+            window.setTimeout(() => {
+              setNewTxIds((s) => {
+                if (!s.has(row.id)) return s;
+                const next = new Set(s);
+                next.delete(row.id);
+                return next;
+              });
+            }, NEW_TX_TTL_MS);
+            // som distinto do "success" do próprio usuário
+            try {
+              playPartner();
+            } catch {
+              /* noop */
+            }
             setMembers((mem) => {
               const author = mem.find((m) => m.id === row.created_by_id);
               const sign = row.type === "receita" ? "+" : row.type === "despesa" ? "-" : "•";
-              const valor = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(row.amount));
+              const valor = new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(Number(row.amount));
               toast(`${author?.name ?? "Parceiro(a)"} adicionou`, {
                 description: `${row.description} ${sign}${valor}`,
               });
@@ -240,13 +267,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [family, activeProfileId]);
 
-  // ============== REALTIME: profiles (avatars/nomes mudando) ==========
+  // ============== REALTIME: profiles ====================
   useEffect(() => {
     if (!family) return;
     const ch = supabase
@@ -277,7 +303,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const channel = supabase.channel(`presence:${family.id}`, {
       config: { presence: { key: activeProfileId } },
     });
-
     channel
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
@@ -285,11 +310,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setOnlineProfiles(ids);
       })
       .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          await channel.track({ at: Date.now() });
-        }
+        if (status === "SUBSCRIBED") await channel.track({ at: Date.now() });
       });
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -333,6 +355,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hideValues,
       toggleHideValues,
       onlineProfiles,
+      newTxIds,
+      acknowledgeNewTx,
       refresh,
       resetLocal,
       setLocalAfterOnboarding,
@@ -351,6 +375,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hideValues,
       toggleHideValues,
       onlineProfiles,
+      newTxIds,
+      acknowledgeNewTx,
       refresh,
       resetLocal,
       setLocalAfterOnboarding,
