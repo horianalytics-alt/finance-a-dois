@@ -34,6 +34,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PaletteSwitcher } from "@/components/PaletteSwitcher";
+import { MonthNavigator } from "@/components/MonthNavigator";
 import { TransactionCard } from "@/components/TransactionCard";
 import type { Transaction } from "@/lib/app-context";
 
@@ -183,6 +185,7 @@ function DashboardPage() {
             <Button variant="ghost" size="icon" onClick={toggleHideValues} aria-label="Ocultar valores">
               {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </Button>
+            <PaletteSwitcher />
             <ThemeToggle />
             <Link to="/data">
               <Button variant="ghost" size="icon" aria-label="Configurações de Dados">
@@ -200,6 +203,9 @@ function DashboardPage() {
               </Button>
             </Link>
           </div>
+        </div>
+        <div className="border-t bg-background/60 px-4 py-2">
+          <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
         </div>
       </header>
 
@@ -315,27 +321,7 @@ function DashboardPage() {
           </Card>
         )}
 
-        {/* ============== TABS DE MÊS ============== */}
-        <div className="-mx-4 overflow-x-auto px-4">
-          <div className="flex gap-2 pb-1">
-            {monthKeys.map((mk) => (
-              <button
-                key={mk}
-                onClick={() => setActiveMonth(mk)}
-                className={cn(
-                  "shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
-                  activeMonth === mk
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-muted-foreground hover:bg-accent",
-                )}
-              >
-                {monthLabel(mk)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ============== FILTROS RÁPIDOS ============== */}
+        {/* ============== FILTROS RÁPIDOS (sem botões redundantes de tipo) ============== */}
         <div className="-mx-4 overflow-x-auto px-4">
           <div className="flex gap-2 pb-1">
             <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
@@ -350,19 +336,25 @@ function DashboardPage() {
                 {m.name}
               </FilterChip>
             ))}
-            <FilterChip active={filter === "receita"} onClick={() => setFilter("receita")}>
-              Receitas
-            </FilterChip>
-            <FilterChip active={filter === "despesa"} onClick={() => setFilter("despesa")}>
-              Despesas
-            </FilterChip>
-            <FilterChip
-              active={filter === "investimento"}
-              onClick={() => setFilter("investimento")}
-            >
-              Invest.
-            </FilterChip>
           </div>
+        </div>
+
+        {/* Tipo de transação como toggle discreto */}
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+          {(["all", "receita", "despesa", "investimento"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              className={cn(
+                "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                filter === t
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {t === "all" ? "Todos tipos" : t === "receita" ? "Receitas" : t === "despesa" ? "Despesas" : "Invest."}
+            </button>
+          ))}
         </div>
 
         {/* ============== ORDENAÇÃO ============== */}

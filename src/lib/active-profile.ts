@@ -1,6 +1,8 @@
-// Persiste o "perfil ativo" da família no localStorage.
-// Quando a mesma conta controla dois perfis (ex: Heitor e Carol),
-// este valor define quem é o "autor padrão" das novas transações.
+// Persiste o "perfil ativo" da família no localStorage,
+// preferências de tema (light/dark) e paleta de cor.
+
+import type { PaletteId } from "@/lib/palettes";
+import { DEFAULT_PALETTE } from "@/lib/palettes";
 
 const KEY = "fc.activeProfile.v1";
 
@@ -26,11 +28,23 @@ export function readTheme(): ThemeMode {
   if (typeof window === "undefined") return "light";
   const v = window.localStorage.getItem(THEME_KEY);
   if (v === "dark" || v === "light") return v;
-  // segue preferência do sistema na 1ª visita
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export function writeTheme(t: ThemeMode) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(THEME_KEY, t);
+}
+
+const PALETTE_KEY = "fc.palette.v1";
+
+export function readPalette(): PaletteId {
+  if (typeof window === "undefined") return DEFAULT_PALETTE;
+  const v = window.localStorage.getItem(PALETTE_KEY) as PaletteId | null;
+  return v ?? DEFAULT_PALETTE;
+}
+
+export function writePalette(p: PaletteId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(PALETTE_KEY, p);
 }

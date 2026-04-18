@@ -2,11 +2,13 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/lib/app-context";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { addMonthsISO } from "@/lib/format";
 import { TransactionForm, type TransactionFormValue } from "@/components/TransactionForm";
+import { playSuccess, unlockAudio } from "@/lib/sounds";
 
 export const Route = createFileRoute("/transaction/new")({
   component: NewTransactionPage,
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/transaction/new")({
 
 function NewTransactionPage() {
   const { activeProfile, family, refresh, loading } = useApp();
+  const { session } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
@@ -22,17 +25,20 @@ function NewTransactionPage() {
   }, [loading, activeProfile, navigate]);
 
   const handleSubmit = async (v: TransactionFormValue) => {
-    if (!activeProfile || !family) return;
+    if (!activeProfile || !family || !session) return;
+    unlockAudio();
     setBusy(true);
     try {
-      // 1) Mãe
+      // CRITICAL: user_id é SEMPRE o usuário autenticado (auth.uid()),
+      // independentemente de qual perfil é o OWNER. Isso é o que faz a Carol funcionar.
+      const authUserId = session.user.id;
       const { data: parent, error: parentErr } = await supabase
         .from("transactions")
         .insert({
           family_id: family.id,
-          profile_id: v.owner_profile_id, // OWNER
-          created_by_id: activeProfile.id, // AUTOR
-          user_id: activeProfile.user_id,
+          profile_id: v.owner_profile_id, // OWNER (perfil ativo no switcher)
+          created_by_id: activeProfile.id, // AUTOR (perfil ativo no momento da inserção)
+          user_id: authUserId,             // sempre auth.uid()
           type: v.type,
           description: v.description,
           amount: v.amount,
@@ -50,13 +56,12 @@ function NewTransactionPage() {
         .single();
       if (parentErr || !parent) throw parentErr ?? new Error("erro ao criar");
 
-      // 2) Parcelas restantes
       if (v.recurrence_months > 1) {
         const rest = Array.from({ length: v.recurrence_months - 1 }, (_, i) => ({
           family_id: family.id,
           profile_id: v.owner_profile_id,
           created_by_id: activeProfile.id,
-          user_id: activeProfile.user_id,
+          user_id: authUserId,
           type: v.type,
           description: v.description,
           amount: v.amount,
@@ -75,6 +80,7 @@ function NewTransactionPage() {
       }
 
       await refresh();
+      try { playSuccess(); } catch { /* noop */ }
       toast.success("Transação adicionada!");
       navigate({ to: "/dashboard" });
     } catch (e: unknown) {
