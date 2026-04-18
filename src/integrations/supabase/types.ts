@@ -106,6 +106,7 @@ export type Database = {
           family_id: string
           id: string
           name: string
+          settings: Json
           updated_at: string
           user_id: string
         }
@@ -115,6 +116,7 @@ export type Database = {
           family_id: string
           id?: string
           name: string
+          settings?: Json
           updated_at?: string
           user_id: string
         }
@@ -124,6 +126,7 @@ export type Database = {
           family_id?: string
           id?: string
           name?: string
+          settings?: Json
           updated_at?: string
           user_id?: string
         }
@@ -330,6 +333,10 @@ export type Database = {
           family_id: string
           profile_id: string
         }[]
+      }
+      set_profile_settings: {
+        Args: { _profile_id: string; _settings: Json }
+        Returns: undefined
       }
     }
     Enums: {
