@@ -51,7 +51,8 @@ function EditTransactionPage() {
   const isRecurring = tx.recurrence_months > 1;
   const seriesParentId = tx.recurrence_parent_id ?? tx.id;
 
-  const handleSubmit = async (v: TransactionFormValue) => {
+  const handleSubmit = async (values: TransactionFormValue[]) => {
+    const v = values[0];
     setBusy(true);
     try {
       const patch = {
