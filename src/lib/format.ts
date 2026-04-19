@@ -1,26 +1,49 @@
 // Utilidades de formatação financeira e de data SEM conversão de timezone.
 
+const BRL_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const BRL_COMPACT_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 export function formatBRL(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+  // SEM Math.round/floor/ceil — preserva centavos
+  return BRL_FORMATTER.format(Number(value));
 }
 
 export function formatBRLCompact(value: number): string {
-  if (Math.abs(value) >= 1000) {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    }).format(value);
-  }
-  return formatBRL(value);
+  // Mesmo no "compact" mantemos 2 casas decimais por requisito de auditoria.
+  return BRL_COMPACT_FORMATTER.format(Number(value));
 }
 
 /** Mascara um valor financeiro como asteriscos preservando o "R$" */
 export function maskedBRL(): string {
   return "R$ ••••";
+}
+
+/**
+ * Converte uma string digitada pelo usuário ("1.234,56", "1234.56", "1234,5")
+ * em number com precisão decimal, sem perder centavos. Retorna NaN se inválido.
+ */
+export function parseBRLInput(raw: string): number {
+  if (!raw) return NaN;
+  let s = raw.trim();
+  // Caso BR com vírgula decimal: "1.234,56" → "1234.56"
+  if (s.includes(",")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  }
+  // Mantém só dígitos e ponto
+  s = s.replace(/[^0-9.]/g, "");
+  const n = parseFloat(s);
+  return isFinite(n) ? n : NaN;
 }
 
 /**

@@ -157,12 +157,41 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Mobile-first: limita largura */
+  /* === Scrollbar oculta em todo o app (estética nativa) === */
+  /* Firefox */
+  html, body, * {
+    scrollbar-width: none;
+  }
+  /* Chromium / WebKit */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+
+  /* App shell:
+     - Mobile: largura 100% (até 640px funciona bem com max-w-md interno)
+     - Desktop: max-w-7xl pra usar todo o espaço horizontal */
   #app-shell {
-    max-width: 480px;
+    width: 100%;
     margin: 0 auto;
     min-height: 100svh;
     background: var(--color-background);
     position: relative;
+  }
+
+  @media (min-width: 768px) {
+    #app-shell {
+      max-width: 80rem; /* ~ tailwind max-w-7xl */
+    }
+  }
+
+  /* Badge "Novo" pulsando */
+  @keyframes ffh-new-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+  }
+  .ffh-new-pulse {
+    animation: ffh-new-pulse 1.6s ease-in-out infinite;
   }
 }
