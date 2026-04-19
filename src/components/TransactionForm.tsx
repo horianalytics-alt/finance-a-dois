@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/DateInput";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Plus, X } from "lucide-react";
 import { useApp, type Transaction, type TxType } from "@/lib/app-context";
-import { brToISO, isoToBR, todayBR } from "@/lib/format";
+import { brToISO, isoToBR, parseBRLInput, todayBR } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +28,25 @@ export interface TransactionFormValue {
   owner_profile_id: string;
 }
 
+interface ExtraRow {
+  id: string;
+  description: string;
+  category_id: string | null;
+  amount: string;
+  owner_profile_id: string;
+  type: TxType;
+}
+
 interface Props {
   initial?: Partial<Transaction>;
   busy?: boolean;
   submitLabel?: string;
-  onSubmit: (v: TransactionFormValue) => Promise<void> | void;
+  /** Callback de salvar. Recebe um array — vindo do form principal e (opcionalmente) extras. */
+  onSubmit: (values: TransactionFormValue[]) => Promise<void> | void;
   onCancel?: () => void;
   hideRecurrence?: boolean; // ao editar recorrente, não permitimos mudar
+  /** Habilita o "+ Adicionar outra transação" (lote) — só na criação. */
+  allowBulk?: boolean;
 }
 
 export function TransactionForm({
@@ -43,6 +56,7 @@ export function TransactionForm({
   onSubmit,
   onCancel,
   hideRecurrence,
+  allowBulk = false,
 }: Props) {
   const { categories, paymentMethods, members, activeProfile } = useApp();
 
@@ -63,6 +77,7 @@ export function TransactionForm({
   const [ownerId, setOwnerId] = useState<string>(
     initial?.profile_id ?? activeProfile?.id ?? "",
   );
+  const [extras, setExtras] = useState<ExtraRow[]>([]);
 
   // Quando muda type, limpa categoria se não for compatível
   useEffect(() => {
@@ -78,6 +93,28 @@ export function TransactionForm({
 
   const filteredCategories = categories.filter((c) => c.type === type);
 
+  const addExtra = () => {
+    setExtras((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        description: "",
+        category_id: null,
+        amount: "",
+        owner_profile_id: ownerId || activeProfile?.id || "",
+        type,
+      },
+    ]);
+  };
+
+  const updateExtra = (id: string, patch: Partial<ExtraRow>) => {
+    setExtras((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const removeExtra = (id: string) => {
+    setExtras((prev) => prev.filter((r) => r.id !== id));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const iso = brToISO(date);
@@ -85,7 +122,7 @@ export function TransactionForm({
       toast.error("Data inválida. Use DD/MM/AAAA.");
       return;
     }
-    const value = parseFloat(amount.replace(",", "."));
+    const value = parseBRLInput(amount);
     if (!isFinite(value) || value <= 0) {
       toast.error("Valor inválido.");
       return;
@@ -96,7 +133,8 @@ export function TransactionForm({
       toast.error("Selecione o responsável.");
       return;
     }
-    await onSubmit({
+
+    const main: TransactionFormValue = {
       date: iso,
       type,
       description: description.trim(),
@@ -108,7 +146,39 @@ export function TransactionForm({
       is_benefit: isBenefit,
       recurrence_months: months,
       owner_profile_id: ownerId,
-    });
+    };
+
+    const all: TransactionFormValue[] = [main];
+    for (const r of extras) {
+      const v = parseBRLInput(r.amount);
+      if (!r.description.trim()) {
+        toast.error(`Descrição vazia em uma das transações em lote.`);
+        return;
+      }
+      if (!isFinite(v) || v <= 0) {
+        toast.error(`Valor inválido em "${r.description}".`);
+        return;
+      }
+      if (!r.owner_profile_id) {
+        toast.error(`Responsável vazio em "${r.description}".`);
+        return;
+      }
+      all.push({
+        date: iso, // herda data do principal
+        type: r.type,
+        description: r.description.trim(),
+        category_id: r.category_id,
+        amount: v,
+        paid_date: paidIso,
+        payment_method_id: pmId, // herda forma de pagamento
+        is_paid: isPaid,
+        is_benefit: isBenefit,
+        recurrence_months: 1, // extras não recorrem
+        owner_profile_id: r.owner_profile_id,
+      });
+    }
+
+    await onSubmit(all);
   };
 
   return (
@@ -268,6 +338,107 @@ export function TransactionForm({
         </CardContent>
       </Card>
 
+      {/* ============== LOTE ============== */}
+      {allowBulk && (
+        <Card className="border-dashed">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Lote rápido</p>
+                <p className="text-xs text-muted-foreground">
+                  Mesma data e forma de pagamento da principal.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addExtra}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar outra
+              </Button>
+            </div>
+
+            {extras.length > 0 && (
+              <ul className="space-y-2">
+                {extras.map((row) => {
+                  const cats = categories.filter((c) => c.type === row.type);
+                  return (
+                    <li
+                      key={row.id}
+                      className="space-y-2 rounded-lg border border-border bg-card p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <Tabs
+                          value={row.type}
+                          onValueChange={(v) => updateExtra(row.id, { type: v as TxType, category_id: null })}
+                          className="flex-1"
+                        >
+                          <TabsList className="grid w-full grid-cols-3 h-8">
+                            <TabsTrigger value="despesa" className="text-xs h-6">Desp.</TabsTrigger>
+                            <TabsTrigger value="receita" className="text-xs h-6">Rec.</TabsTrigger>
+                            <TabsTrigger value="investimento" className="text-xs h-6">Inv.</TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0 text-destructive"
+                          onClick={() => removeExtra(row.id)}
+                          aria-label="Remover linha"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="Descrição"
+                        value={row.description}
+                        onChange={(e) => updateExtra(row.id, { description: e.target.value })}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <SearchableSelect
+                          options={cats.map((c) => ({ value: c.id, label: c.name }))}
+                          value={row.category_id}
+                          onChange={(v) => updateExtra(row.id, { category_id: v })}
+                          placeholder="Categoria"
+                        />
+                        <Input
+                          inputMode="decimal"
+                          placeholder="Valor (R$)"
+                          value={row.amount}
+                          onChange={(e) => updateExtra(row.id, { amount: e.target.value })}
+                        />
+                      </div>
+                      {members.length > 1 && (
+                        <div className="grid grid-cols-2 gap-1">
+                          {members.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => updateExtra(row.id, { owner_profile_id: m.id })}
+                              className={cn(
+                                "flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors",
+                                row.owner_profile_id === m.id
+                                  ? "border-primary bg-primary/10"
+                                  : "border-border bg-card hover:bg-accent/40",
+                              )}
+                            >
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={m.avatar_url ?? undefined} />
+                                <AvatarFallback className="text-[8px]">
+                                  {m.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {m.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex gap-2">
         {onCancel && (
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
@@ -275,7 +446,11 @@ export function TransactionForm({
           </Button>
         )}
         <Button type="submit" size="lg" className="flex-1" disabled={busy}>
-          {busy ? "Salvando..." : submitLabel}
+          {busy
+            ? "Salvando..."
+            : extras.length > 0
+              ? `${submitLabel} (${extras.length + 1})`
+              : submitLabel}
         </Button>
       </div>
     </form>
