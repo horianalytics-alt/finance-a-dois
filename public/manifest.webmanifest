@@ -4,8 +4,8 @@
   "description": "Gestão financeira para casais",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#fdf7fa",
-  "theme_color": "#e94f8b",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
   "orientation": "portrait",
   "icons": [
     {
