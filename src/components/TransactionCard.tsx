@@ -1,8 +1,21 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Pencil } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Clock, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatBRL, formatCreatedTime, isoToBR, maskedBRL } from "@/lib/format";
 import type { Category, PaymentMethod, Profile, Transaction } from "@/lib/app-context";
@@ -14,10 +27,31 @@ interface Props {
   owner?: Profile | null;
   author?: Profile | null;
   hideValues: boolean;
+  isNew?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  onDelete?: () => Promise<void> | void;
+  onAcknowledge?: () => void;
 }
 
-export function TransactionCard({ tx, category, pm, owner, author, hideValues }: Props) {
+export function TransactionCard({
+  tx,
+  category,
+  pm,
+  owner,
+  author,
+  hideValues,
+  isNew,
+  selectable,
+  selected,
+  onToggleSelect,
+  onDelete,
+  onAcknowledge,
+}: Props) {
   const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+
   const sign = tx.type === "receita" ? "+" : tx.type === "despesa" ? "-" : "•";
   const valueColor =
     tx.type === "receita"
@@ -26,23 +60,53 @@ export function TransactionCard({ tx, category, pm, owner, author, hideValues }:
         ? "text-destructive"
         : "text-[color:var(--investment)]";
 
-  const borderColor = tx.is_benefit
-    ? "var(--benefit)"
-    : tx.type === "receita"
-      ? "var(--success)"
-      : tx.type === "despesa"
-        ? "var(--destructive)"
-        : "var(--investment)";
+  const borderColor = isNew
+    ? "var(--warning)"
+    : tx.is_benefit
+      ? "var(--benefit)"
+      : tx.type === "receita"
+        ? "var(--success)"
+        : tx.type === "despesa"
+          ? "var(--destructive)"
+          : "var(--investment)";
 
   const fmt = (n: number) => (hideValues ? maskedBRL() : formatBRL(n));
 
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <Card className="border-l-4" style={{ borderLeftColor: borderColor }}>
+    <Card
+      className={cn("border-l-4 transition-colors", isNew && "ring-2 ring-warning/40 ffh-new-pulse")}
+      style={{ borderLeftColor: borderColor }}
+      onMouseEnter={onAcknowledge}
+    >
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-3">
+          {selectable && (
+            <div className="pt-0.5">
+              <Checkbox
+                checked={!!selected}
+                onCheckedChange={() => onToggleSelect?.()}
+                aria-label="Selecionar"
+              />
+            </div>
+          )}
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="flex items-center gap-2">
               <p className="truncate text-sm font-medium">{tx.description}</p>
+              {isNew && (
+                <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[color:var(--warning-foreground)]">
+                  Novo
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {isoToBR(tx.date)}
@@ -84,21 +148,55 @@ export function TransactionCard({ tx, category, pm, owner, author, hideValues }:
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <div className={cn("text-right text-sm font-semibold", valueColor)}>
+            <div className={cn("text-right text-sm font-semibold tabular-nums", valueColor)}>
               {sign}
               {fmt(Number(tx.amount))}
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={() =>
-                navigate({ to: "/transaction/$id", params: { id: tx.id } })
-              }
-              aria-label="Editar"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-0.5">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() =>
+                  navigate({ to: "/transaction/$id", params: { id: tx.id } })
+                }
+                aria-label="Editar"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              {onDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      aria-label="Excluir"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir transação?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        "{tx.description}" — {fmt(Number(tx.amount))}. Essa ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        className="bg-destructive text-destructive-foreground"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
