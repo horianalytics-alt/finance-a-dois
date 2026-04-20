@@ -163,7 +163,7 @@ function OnboardingPage() {
             {mode === "choose" && "Crie a família com os dois perfis ou entre com o código."}
             {mode === "create" && "Como vocês se chamam?"}
             {mode === "join" && "Insira o código e seu nome."}
-            {mode === "join-pick" && "Esta família já tem 2 perfis. Quem é você?"}
+            {mode === "join-pick" && "Escolha o seu perfil para continuar."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -267,9 +267,8 @@ function OnboardingPage() {
           )}
           {mode === "join-pick" && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-[color:var(--warning-foreground)]">
-                Esta família já está completa (2 perfis). Cada perfil pertence a uma
-                conta. Faça login com o e-mail correto para acessar.
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-foreground">
+                Selecione o perfil que é seu. Ele será vinculado à sua conta.
               </div>
               {pickProfiles.map((p) => (
                 <Button
