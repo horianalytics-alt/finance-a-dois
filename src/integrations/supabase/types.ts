@@ -304,6 +304,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_family_profiles_by_code: {
+        Args: { _code: string }
+        Returns: {
+          family_id: string
+          profile_count: number
+          profile_names: string[]
+        }[]
+      }
       create_family_and_profile: {
         Args: { _name: string }
         Returns: {
