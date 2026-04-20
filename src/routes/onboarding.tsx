@@ -128,14 +128,27 @@ function OnboardingPage() {
   };
 
   const handlePickProfile = async (profileId: string) => {
-    // Esta família já tem 2 perfis e o usuário escolheu um deles.
-    // Como cada perfil tem user_id próprio, não dá pra "assumir" um perfil
-    // de outra conta. O que fazemos: avisamos que essa família está completa
-    // e o usuário precisa logar com a conta correta.
-    const _profile = pickProfiles.find((p) => p.id === profileId);
-    toast.error(
-      `A família já tem 2 perfis. "${_profile?.name}" já pertence a outra conta. Faça login com aquele e-mail.`,
-    );
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("claim_profile", {
+        _profile_id: profileId,
+      });
+      if (error) throw error;
+      const row = data?.[0];
+      if (row?.profile_id) writeActiveProfileId(row.profile_id);
+      toast.success("Perfil vinculado à sua conta!");
+      await refresh();
+      navigate({ to: "/dashboard" });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erro ao vincular perfil.";
+      if (msg.includes("already have a profile")) {
+        toast.error("Você já tem um perfil nesta família.");
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -150,7 +163,7 @@ function OnboardingPage() {
             {mode === "choose" && "Crie a família com os dois perfis ou entre com o código."}
             {mode === "create" && "Como vocês se chamam?"}
             {mode === "join" && "Insira o código e seu nome."}
-            {mode === "join-pick" && "Esta família já tem 2 perfis. Quem é você?"}
+            {mode === "join-pick" && "Escolha o seu perfil para continuar."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -254,9 +267,8 @@ function OnboardingPage() {
           )}
           {mode === "join-pick" && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-[color:var(--warning-foreground)]">
-                Esta família já está completa (2 perfis). Cada perfil pertence a uma
-                conta. Faça login com o e-mail correto para acessar.
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-foreground">
+                Selecione o perfil que é seu. Ele será vinculado à sua conta.
               </div>
               {pickProfiles.map((p) => (
                 <Button
