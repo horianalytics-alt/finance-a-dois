@@ -169,19 +169,25 @@
     background: transparent;
   }
 
-  /* App shell:
-     - Mobile: largura 100% (até 640px funciona bem com max-w-md interno)
-     - Desktop: max-w-7xl pra usar todo o espaço horizontal */
+  /* App shell ocupa 100% da viewport. O conteúdo interno
+     (header sticky + main) usa wrapper .ffh-container pra centralizar
+     em desktop sem deixar o sticky/cabeçalho com largura menor. */
   #app-shell {
     width: 100%;
-    margin: 0 auto;
     min-height: 100svh;
     background: var(--color-background);
     position: relative;
   }
 
+  /* Wrapper de conteúdo: 100% no mobile, max-w-7xl no desktop, centralizado.
+     Use em <header> sticky e <main> para alinhamento perfeito. */
+  .ffh-container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
   @media (min-width: 768px) {
-    #app-shell {
+    .ffh-container {
       max-width: 80rem; /* ~ tailwind max-w-7xl */
     }
   }
