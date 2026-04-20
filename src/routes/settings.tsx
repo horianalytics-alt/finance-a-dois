@@ -127,18 +127,16 @@ function SettingsPage() {
 
   const handleEnablePush = async () => {
     if (!activeProfile || !family) return;
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
-    if (!vapidKey) {
-      toast.error(
-        "Chave VAPID pública não configurada. Configure VITE_VAPID_PUBLIC_KEY após publicar o app.",
-      );
+    const { VAPID_PUBLIC_KEY, HAS_VAPID_KEY } = await import("@/lib/vapid");
+    if (!HAS_VAPID_KEY) {
+      toast.error("Chave VAPID pública indisponível. Publique o app e tente novamente.");
       return;
     }
     const r = await requestAndSubscribe({
       profileId: activeProfile.id,
       familyId: family.id,
       userId: activeProfile.user_id,
-      vapidPublicKey: vapidKey,
+      vapidPublicKey: VAPID_PUBLIC_KEY,
     });
     if (r.ok) {
       toast.success("Notificações ativadas!");
