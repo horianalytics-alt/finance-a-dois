@@ -179,17 +179,13 @@
     position: relative;
   }
 
-  /* Wrapper de conteúdo: 100% no mobile, max-w-7xl no desktop, centralizado.
-     Use em <header> sticky e <main> para alinhamento perfeito. */
+  /* Wrapper de conteúdo: SEMPRE 100% da viewport, sem max-width.
+     Garante que header sticky e main tenham largura idêntica em qualquer tela. */
   .ffh-container {
     width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  @media (min-width: 768px) {
-    .ffh-container {
-      max-width: 80rem; /* ~ tailwind max-w-7xl */
-    }
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   /* Badge "Novo" pulsando */
