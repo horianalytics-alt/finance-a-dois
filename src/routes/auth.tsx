@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Heart } from "lucide-react";
+import { Heart, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -22,6 +22,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
 
   useEffect(() => {
     if (loading) return;
@@ -62,6 +64,23 @@ function AuthPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Link de redefinição enviado! Verifique seu email.");
+      setForgotMode(false);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao enviar link");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="flex min-h-svh items-center justify-center p-5">
       <Card className="w-full border-0 shadow-none bg-transparent">
@@ -73,6 +92,23 @@ function AuthPage() {
           <CardDescription>Gerenciem o dinheiro juntos, com calma.</CardDescription>
         </CardHeader>
         <CardContent>
+          {forgotMode ? (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Insira seu email para receber o link de redefinição de senha.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input id="reset-email" type="email" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
+              </div>
+              <Button type="submit" className="w-full" disabled={busy}>
+                {busy ? "Enviando..." : "Enviar link de redefinição"}
+              </Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={() => setForgotMode(false)}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar ao login
+              </Button>
+            </form>
+          ) : (
           <Tabs defaultValue="signin">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Entrar</TabsTrigger>
@@ -91,6 +127,13 @@ function AuthPage() {
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? "Entrando..." : "Entrar"}
                 </Button>
+                <button
+                  type="button"
+                  className="w-full text-sm text-primary hover:underline"
+                  onClick={() => setForgotMode(true)}
+                >
+                  Esqueci minha senha
+                </button>
               </form>
             </TabsContent>
             <TabsContent value="signup">
@@ -109,6 +152,7 @@ function AuthPage() {
               </form>
             </TabsContent>
           </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
