@@ -352,8 +352,8 @@ export type Database = {
       link_profile_to_user: {
         Args: { p_family_id: string; p_profile_id: string; p_user_id: string }
         Returns: {
-          family_id: string
-          profile_id: string
+          out_family_id: string
+          out_profile_id: string
         }[]
       }
       list_family_profiles_by_code: {
