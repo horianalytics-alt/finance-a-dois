@@ -179,13 +179,18 @@
     position: relative;
   }
 
-  /* Wrapper de conteúdo: SEMPRE 100% da viewport, sem max-width.
-     Garante que header sticky e main tenham largura idêntica em qualquer tela. */
+  /* Wrapper de conteúdo — full-width em mobile, centrado em desktop */
   .ffh-container {
     width: 100%;
     max-width: 100%;
-    margin-left: 0;
-    margin-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (min-width: 1024px) {
+    .ffh-container {
+      max-width: 1200px;
+    }
   }
 
   /* Badge "Novo" pulsando */

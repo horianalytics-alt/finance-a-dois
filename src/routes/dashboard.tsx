@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, Settings, Plus, Download, TrendingUp, Sparkles, Wallet,
   ArrowDownCircle, ArrowUpCircle, Activity, PiggyBank, Calendar,
   ArrowDownToLine, ArrowUpFromLine, TrendingDown, Database, Trash2, CheckSquare, Square,
+  BarChart3,
 } from "lucide-react";
 import {
   formatBRL, formatBRLCompact, maskedBRL, monthKeyFromISO, todayISO,
@@ -168,7 +169,7 @@ function DashboardPage() {
 
   return (
     <div className="min-h-svh w-full bg-background pb-32">
-      {/* Header sticky 100% width — conteúdo interno alinhado com main via .ffh-container */}
+      {/* Header sticky — full viewport width, content centered via ffh-container */}
       <header className="sticky top-0 z-30 w-full border-b bg-background/85 backdrop-blur-md">
         <div className="ffh-container">
           <div className="flex items-center justify-between gap-2 px-4 py-3">
@@ -179,6 +180,7 @@ function DashboardPage() {
               </Button>
               <PaletteSwitcher />
               <ThemeToggle />
+              <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
               <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
               <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
               <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>

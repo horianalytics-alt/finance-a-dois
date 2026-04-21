@@ -35,6 +35,9 @@ interface ExtraRow {
   amount: string;
   owner_profile_id: string;
   type: TxType;
+  payment_method_id: string | null;
+  is_paid: boolean;
+  is_benefit: boolean;
 }
 
 interface Props {
@@ -103,6 +106,9 @@ export function TransactionForm({
         amount: "",
         owner_profile_id: ownerId || activeProfile?.id || "",
         type,
+        payment_method_id: pmId,
+        is_paid: isPaid,
+        is_benefit: isBenefit,
       },
     ]);
   };
@@ -169,11 +175,11 @@ export function TransactionForm({
         description: r.description.trim(),
         category_id: r.category_id,
         amount: v,
-        paid_date: paidIso,
-        payment_method_id: pmId, // herda forma de pagamento
-        is_paid: isPaid,
-        is_benefit: isBenefit,
-        recurrence_months: 1, // extras não recorrem
+        paid_date: r.is_paid ? (brToISO(paidDate) ?? iso) : null,
+        payment_method_id: r.payment_method_id,
+        is_paid: r.is_paid,
+        is_benefit: r.is_benefit,
+        recurrence_months: 1,
         owner_profile_id: r.owner_profile_id,
       });
     }
@@ -344,10 +350,10 @@ export function TransactionForm({
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold">Lote rápido</p>
-                <p className="text-xs text-muted-foreground">
-                  Mesma data e forma de pagamento da principal.
-                </p>
+              <p className="text-sm font-semibold">Lote rápido</p>
+              <p className="text-xs text-muted-foreground">
+                Cada item tem seus próprios controles.
+              </p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={addExtra}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar outra
@@ -404,6 +410,24 @@ export function TransactionForm({
                           value={row.amount}
                           onChange={(e) => updateExtra(row.id, { amount: e.target.value })}
                         />
+                      </div>
+                      {/* Forma de pagamento */}
+                      <SearchableSelect
+                        options={paymentMethods.map((p) => ({ value: p.id, label: p.name }))}
+                        value={row.payment_method_id}
+                        onChange={(v) => updateExtra(row.id, { payment_method_id: v })}
+                        placeholder="Forma de pagamento"
+                      />
+                      {/* Toggles Pago + Benefício */}
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <Switch checked={row.is_paid} onCheckedChange={(v) => updateExtra(row.id, { is_paid: v })} />
+                          Pago?
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <Switch checked={row.is_benefit} onCheckedChange={(v) => updateExtra(row.id, { is_benefit: v })} />
+                          Benefício?
+                        </label>
                       </div>
                       {members.length > 1 && (
                         <div className="grid grid-cols-2 gap-1">
