@@ -106,6 +106,9 @@ export function TransactionForm({
         amount: "",
         owner_profile_id: ownerId || activeProfile?.id || "",
         type,
+        payment_method_id: pmId,
+        is_paid: isPaid,
+        is_benefit: isBenefit,
       },
     ]);
   };
