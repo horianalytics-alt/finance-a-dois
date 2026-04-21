@@ -196,34 +196,3 @@
     animation: ffh-new-pulse 1.6s ease-in-out infinite;
   }
 }
-
-/* FORÇA BRUTA DEFINITIVA PARA ALINHAMENTO */
-html, body, #root, #app-shell {
-    width: 100% !important;
-    overflow-x: hidden !important;
-}
-
-div.ffh-container, 
-main.ffh-container, 
-header.ffh-container,
-.ffh-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    margin: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-}
-
-/* Garante que nada no dashboard trave a largura */
-[class*="dashboard"], [class*="container"] {
-    max-width: none !important;
-    width: 100% !important;
-}
-
-/* Segurança para visualização mobile */
-header, main, section {
-    min-width: 100vw !important;
-}
