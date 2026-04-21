@@ -197,8 +197,16 @@
   }
 }
 
-/* Versão leve: apenas remove a trava de largura sem quebrar o zoom */
-.ffh-container, header, main {
-    max-width: none !important;
+/* Ajuste cirúrgico: alinha o topo sem quebrar o zoom ou as configs */
+.ffh-container {
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 auto !important;
+}
+
+header.sticky {
+    width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
 }
