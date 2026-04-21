@@ -168,10 +168,10 @@ function DashboardPage() {
   if (!activeProfile) return null;
 
   return (
-    <div className="min-h-svh w-screen bg-background pb-32">
+    <div className="min-h-svh w-screen overflow-x-hidden bg-background pb-32">
       {/* Header sticky — full viewport width, content centered via ffh-container */}
       <header className="sticky top-0 z-30 w-full border-b bg-background/85 backdrop-blur-md">
-        <div className="w-full px-0">
+        <div className="w-full !left-0 !right-0">
           <div className="flex items-center justify-between gap-2 px-4 py-3">
             <ProfileSwitcher />
             <div className="flex items-center gap-0.5">
