@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Heart, Plus, Users, ArrowLeft } from "lucide-react";
+import { Heart, Plus, Users, ArrowLeft, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/onboarding")({
 type Mode = "choose" | "create" | "join" | "join-pick";
 
 function OnboardingPage() {
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, signOut } = useAuth();
   const { activeProfile, members, loading, refresh } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("choose");
@@ -91,16 +91,16 @@ function OnboardingPage() {
         return;
       }
 
-      // Já tem 2: bloqueia criação de novo, busca lista pra picker
-      if (row.profile_count >= 2) {
-        const { data: profs, error: profErr } = await supabase
-          .from("profiles")
-          .select("id, name")
-          .eq("family_id", row.family_id)
-          .order("created_at");
+      // Já tem perfis: mostra picker para o usuário escolher qual é ele
+      if (row.profile_count >= 1) {
+        // Use SECURITY DEFINER function to bypass RLS (user has no profile yet)
+        const { data: profs, error: profErr } = await supabase.rpc(
+          "list_family_profiles_by_code",
+          { _code: code.trim().toUpperCase() },
+        );
         if (profErr) throw profErr;
         setPickFamilyId(row.family_id);
-        setPickProfiles((profs ?? []).map((p) => ({ id: p.id, name: p.name })));
+        setPickProfiles((profs ?? []).map((p) => ({ id: p.profile_id, name: p.profile_name })));
         setMode("join-pick");
         return;
       }
@@ -160,10 +160,10 @@ function OnboardingPage() {
           </div>
           <CardTitle>Vamos começar</CardTitle>
           <CardDescription>
-            {mode === "choose" && "Crie a família com os dois perfis ou entre com o código."}
+          {mode === "choose" && "Crie a família com os dois perfis ou entre com o código."}
             {mode === "create" && "Como vocês se chamam?"}
             {mode === "join" && "Insira o código e seu nome."}
-            {mode === "join-pick" && "Escolha o seu perfil para continuar."}
+            {mode === "join-pick" && "Selecione o perfil que é seu para continuar."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -305,6 +305,20 @@ function OnboardingPage() {
           )}
         </CardContent>
       </Card>
+      <div className="fixed bottom-6 inset-x-0 flex justify-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground text-xs"
+          onClick={async () => {
+            await signOut();
+            navigate({ to: "/auth" });
+          }}
+        >
+          <LogOut className="mr-1.5 h-3.5 w-3.5" />
+          Sair da conta
+        </Button>
+      </div>
     </div>
   );
 }
