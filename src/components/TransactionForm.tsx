@@ -411,6 +411,24 @@ export function TransactionForm({
                           onChange={(e) => updateExtra(row.id, { amount: e.target.value })}
                         />
                       </div>
+                      {/* Forma de pagamento */}
+                      <SearchableSelect
+                        options={paymentMethods.map((p) => ({ value: p.id, label: p.name }))}
+                        value={row.payment_method_id}
+                        onChange={(v) => updateExtra(row.id, { payment_method_id: v })}
+                        placeholder="Forma de pagamento"
+                      />
+                      {/* Toggles Pago + Benefício */}
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <Switch checked={row.is_paid} onCheckedChange={(v) => updateExtra(row.id, { is_paid: v })} />
+                          Pago?
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <Switch checked={row.is_benefit} onCheckedChange={(v) => updateExtra(row.id, { is_benefit: v })} />
+                          Benefício?
+                        </label>
+                      </div>
                       {members.length > 1 && (
                         <div className="grid grid-cols-2 gap-1">
                           {members.map((m) => (
