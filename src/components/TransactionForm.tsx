@@ -35,6 +35,9 @@ interface ExtraRow {
   amount: string;
   owner_profile_id: string;
   type: TxType;
+  payment_method_id: string | null;
+  is_paid: boolean;
+  is_benefit: boolean;
 }
 
 interface Props {
