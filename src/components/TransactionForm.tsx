@@ -175,11 +175,11 @@ export function TransactionForm({
         description: r.description.trim(),
         category_id: r.category_id,
         amount: v,
-        paid_date: paidIso,
-        payment_method_id: pmId, // herda forma de pagamento
-        is_paid: isPaid,
-        is_benefit: isBenefit,
-        recurrence_months: 1, // extras não recorrem
+        paid_date: r.is_paid ? (brToISO(paidDate) ?? iso) : null,
+        payment_method_id: r.payment_method_id,
+        is_paid: r.is_paid,
+        is_benefit: r.is_benefit,
+        recurrence_months: 1,
         owner_profile_id: r.owner_profile_id,
       });
     }
@@ -350,10 +350,10 @@ export function TransactionForm({
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold">Lote rápido</p>
-                <p className="text-xs text-muted-foreground">
-                  Mesma data e forma de pagamento da principal.
-                </p>
+              <p className="text-sm font-semibold">Lote rápido</p>
+              <p className="text-xs text-muted-foreground">
+                Cada item tem seus próprios controles.
+              </p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={addExtra}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar outra
