@@ -349,6 +349,14 @@ export type Database = {
           profile_id: string
         }[]
       }
+      list_family_profiles_by_code: {
+        Args: { _code: string }
+        Returns: {
+          family_id: string
+          profile_id: string
+          profile_name: string
+        }[]
+      }
       set_profile_settings: {
         Args: { _profile_id: string; _settings: Json }
         Returns: undefined

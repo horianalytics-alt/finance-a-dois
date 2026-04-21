@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as DataRouteImport } from './routes/data'
@@ -22,6 +23,11 @@ import { Route as TransactionIdRouteImport } from './routes/transaction.$id'
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/data': typeof DataRoute
   '/export': typeof ExportRoute
   '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/transaction/$id': typeof TransactionIdRoute
   '/transaction/new': typeof TransactionNewRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/data': typeof DataRoute
   '/export': typeof ExportRoute
   '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/transaction/$id': typeof TransactionIdRoute
   '/transaction/new': typeof TransactionNewRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/data': typeof DataRoute
   '/export': typeof ExportRoute
   '/onboarding': typeof OnboardingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/transaction/$id': typeof TransactionIdRoute
   '/transaction/new': typeof TransactionNewRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/data'
     | '/export'
     | '/onboarding'
+    | '/reset-password'
     | '/settings'
     | '/transaction/$id'
     | '/transaction/new'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/data'
     | '/export'
     | '/onboarding'
+    | '/reset-password'
     | '/settings'
     | '/transaction/$id'
     | '/transaction/new'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/data'
     | '/export'
     | '/onboarding'
+    | '/reset-password'
     | '/settings'
     | '/transaction/$id'
     | '/transaction/new'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   DataRoute: typeof DataRoute
   ExportRoute: typeof ExportRoute
   OnboardingRoute: typeof OnboardingRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   TransactionIdRoute: typeof TransactionIdRoute
   TransactionNewRoute: typeof TransactionNewRoute
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   DataRoute: DataRoute,
   ExportRoute: ExportRoute,
   OnboardingRoute: OnboardingRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   TransactionIdRoute: TransactionIdRoute,
   TransactionNewRoute: TransactionNewRoute,
