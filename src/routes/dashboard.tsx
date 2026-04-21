@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, Settings, Plus, Download, TrendingUp, Sparkles, Wallet,
   ArrowDownCircle, ArrowUpCircle, Activity, PiggyBank, Calendar,
   ArrowDownToLine, ArrowUpFromLine, TrendingDown, Database, Trash2, CheckSquare, Square,
+  BarChart3,
 } from "lucide-react";
 import {
   formatBRL, formatBRLCompact, maskedBRL, monthKeyFromISO, todayISO,
@@ -179,6 +180,7 @@ function DashboardPage() {
               </Button>
               <PaletteSwitcher />
               <ThemeToggle />
+              <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
               <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
               <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
               <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>
