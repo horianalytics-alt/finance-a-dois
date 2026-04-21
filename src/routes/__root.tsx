@@ -39,6 +39,8 @@ export const Route = createRootRoute({
       { name: "twitter:description", content: "Gestão financeira simples e elegante para casais" },
       { name: "twitter:card", content: "summary" },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/92e0a195-7a4c-4e18-9b65-5c5b897da9b1" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/92e0a195-7a4c-4e18-9b65-5c5b897da9b1" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
