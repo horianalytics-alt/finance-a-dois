@@ -196,3 +196,9 @@
     animation: ffh-new-pulse 1.6s ease-in-out infinite;
   }
 }
+
+/* Versão leve: apenas remove a trava de largura sem quebrar o zoom */
+.ffh-container, header, main {
+    max-width: none !important;
+    width: 100% !important;
+}
