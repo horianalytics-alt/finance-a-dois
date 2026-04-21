@@ -125,7 +125,7 @@ function AnalyticsPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(val: number) => formatBRL(val)}
+                          formatter={(val) => formatBRL(Number(val))}
                           contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
                         />
                       </PieChart>
@@ -164,7 +164,7 @@ function AnalyticsPage() {
                     <BarChart data={memberComparison} barCategoryGap="25%">
                       <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                       <YAxis tickFormatter={(v: number) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} width={55} />
-                      <Tooltip formatter={(val: number) => formatBRL(val)} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                      <Tooltip formatter={(val) => formatBRL(Number(val))} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       <Bar dataKey="receita" name="Receita" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="despesa" name="Despesa" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
