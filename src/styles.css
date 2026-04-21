@@ -187,13 +187,9 @@
     margin-right: auto;
   }
 
-  /* Badge "Novo" pulsando */
-  @keyframes ffh-new-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(1.05); }
-  }
-  .ffh-new-pulse {
-    animation: ffh-new-pulse 1.6s ease-in-out infinite;
-  }
+ /* Técnica da Sombra Infinita: estica a cor sem travar o zoom */
+header {
+    background-color: var(--color-background) !important;
+    box-shadow: 0 0 0 100vmax var(--color-background) !important;
+    clip-path: inset(0 -100vmax) !important;
 }
-
