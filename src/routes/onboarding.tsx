@@ -25,7 +25,7 @@ type Mode = "choose" | "create" | "join" | "join-pick";
 
 function OnboardingPage() {
   const { session, loading: authLoading, signOut } = useAuth();
-  const { activeProfile, members, loading, refresh } = useApp();
+  const { activeProfile, members, loading, refresh, setLocalAfterOnboarding } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("choose");
   const [name1, setName1] = useState("");
@@ -127,17 +127,29 @@ function OnboardingPage() {
     }
   };
 
-  const handlePickProfile = async (profileId: string) => {
+  const handlePickProfile = async (profile: { id: string; name: string }) => {
     setBusy(true);
     try {
-      const { data, error } = await supabase.rpc("claim_profile", {
-        _profile_id: profileId,
+      if (!session?.user?.id) throw new Error("Not authenticated");
+      if (!pickFamilyId) throw new Error("Família não encontrada");
+
+      const { data, error } = await supabase.rpc("link_profile_to_user", {
+        p_profile_id: profile.id,
+        p_user_id: session.user.id,
+        p_family_id: pickFamilyId,
       });
       if (error) throw error;
       const row = data?.[0];
-      if (row?.profile_id) writeActiveProfileId(row.profile_id);
+      if (row?.profile_id) {
+        writeActiveProfileId(row.profile_id);
+        await setLocalAfterOnboarding({
+          family_id: row.family_id,
+          profile_id: row.profile_id,
+          family_code: code.trim().toUpperCase(),
+          profile_name: profile.name,
+        });
+      }
       toast.success("Perfil vinculado à sua conta!");
-      await refresh();
       navigate({ to: "/dashboard" });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro ao vincular perfil.";
@@ -276,7 +288,7 @@ function OnboardingPage() {
                   size="lg"
                   variant="outline"
                   className="h-14 w-full justify-start gap-3 rounded-xl"
-                  onClick={() => handlePickProfile(p.id)}
+                  onClick={() => handlePickProfile(p)}
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
                     {p.name.charAt(0).toUpperCase()}
