@@ -140,11 +140,11 @@ function OnboardingPage() {
       });
       if (error) throw error;
       const row = data?.[0];
-      if (row?.profile_id) {
-        writeActiveProfileId(row.profile_id);
+      if (row?.out_profile_id) {
+        writeActiveProfileId(row.out_profile_id);
         await setLocalAfterOnboarding({
-          family_id: row.family_id,
-          profile_id: row.profile_id,
+          family_id: row.out_family_id,
+          profile_id: row.out_profile_id,
           family_code: code.trim().toUpperCase(),
           profile_name: profile.name,
         });
