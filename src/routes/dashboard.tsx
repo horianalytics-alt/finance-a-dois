@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PaletteSwitcher } from "@/components/PaletteSwitcher";
 import { MonthNavigator } from "@/components/MonthNavigator";
 import { TransactionCard } from "@/components/TransactionCard";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -168,29 +169,40 @@ function DashboardPage() {
   if (!activeProfile) return null;
 
   return (
-    <div className="min-h-svh w-full bg-background pb-32 overflow-x-hidden">
-      {/* Header sticky — full viewport width, content centered via ffh-container */}
-      <header className="sticky top-0 z-30 w-full border-b bg-background">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <ProfileSwitcher />
-          <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="icon" onClick={toggleHideValues} aria-label="Ocultar valores">
-              {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </Button>
-            <PaletteSwitcher />
-            <ThemeToggle />
-            <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
-            <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
-            <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
-            <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>
+    <>
+      <DesktopSidebar hideValues={hideValues} toggleHideValues={toggleHideValues} />
+      <div className="min-h-svh w-full bg-background pb-32 lg:pl-56">
+        {/* Header sticky — hidden sidebar nav on mobile, simplified on desktop */}
+        <header className="sticky top-0 z-30 w-full border-b bg-background">
+          <div className="flex items-center justify-between gap-2 px-4 py-3">
+            <div className="lg:hidden"><ProfileSwitcher /></div>
+            <div className="hidden lg:block">
+              <h1 className="text-lg font-semibold">Dashboard</h1>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <div className="lg:hidden">
+                <Button variant="ghost" size="icon" onClick={toggleHideValues} aria-label="Ocultar valores">
+                  {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </Button>
+              </div>
+              <div className="lg:hidden flex items-center gap-0.5">
+                <PaletteSwitcher />
+                <ThemeToggle />
+              </div>
+              <div className="lg:hidden flex items-center gap-0.5">
+                <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
+                <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
+                <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
+                <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="border-t bg-background/60 px-4 py-2">
-          <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
-        </div>
-      </header>
+          <div className="border-t bg-background/60 px-4 py-2">
+            <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
+          </div>
+        </header>
 
-     <main className="w-full space-y-5 px-4 pt-5">
+     <main className="w-full space-y-5 px-4 pt-5 overflow-x-clip">
         {/* 8 CARDS — grid 2 col mobile, 4 col desktop */}
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
           <SummaryCard label="Receitas (pagas)" value={fmtCompact(totalReceitasPagas)} icon={<ArrowDownCircle className="h-4 w-4" />} tone="success" />
@@ -369,7 +381,8 @@ function DashboardPage() {
           <Plus className="h-6 w-6" />
         </Button>
       </Link>
-    </div>
+      </div>
+    </>
   );
 }
 

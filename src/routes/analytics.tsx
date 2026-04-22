@@ -4,13 +4,17 @@ import { useAuth } from "@/lib/auth-context";
 import { useApp } from "@/lib/app-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wallet, TrendingDown, PieChart as PieChartIcon } from "lucide-react";
+import {
+  ArrowLeft, Wallet, TrendingDown, PieChart as PieChartIcon,
+  TrendingUp, Flame, CalendarDays,
+} from "lucide-react";
 import { formatBRL, monthKeyFromISO, todayISO } from "@/lib/format";
 import { MonthNavigator } from "@/components/MonthNavigator";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
 } from "recharts";
+import type { Transaction } from "@/lib/app-context";
 
 export const Route = createFileRoute("/analytics")({
   component: AnalyticsPage,
@@ -21,6 +25,8 @@ const COLORS = [
   "var(--chart-4)", "var(--chart-5)",
   "oklch(0.70 0.15 200)", "oklch(0.65 0.12 30)", "oklch(0.55 0.20 120)",
 ];
+
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function AnalyticsPage() {
   const { session, loading: authLoading } = useAuth();
@@ -40,7 +46,7 @@ function AnalyticsPage() {
     [transactions, activeMonth],
   );
 
-  // Gastos por categoria (donut)
+  // ===== Gastos por categoria (donut) =====
   const categoryData = useMemo(() => {
     const map = new Map<string, number>();
     monthTx.filter((t) => t.type === "despesa").forEach((t) => {
@@ -52,50 +58,122 @@ function AnalyticsPage() {
       .sort((a, b) => b.value - a.value);
   }, [monthTx, categories]);
 
-  // Comparativo por membro (bar chart)
+  // ===== Comparativo por membro =====
   const memberComparison = useMemo(() => {
-    const result: { name: string; receita: number; despesa: number; investimento: number }[] = [];
-    for (const m of members) {
+    return members.map((m) => {
       const mTx = monthTx.filter((t) => t.profile_id === m.id);
-      result.push({
+      return {
         name: m.name,
         receita: mTx.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0),
         despesa: mTx.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0),
         investimento: mTx.filter((t) => t.type === "investimento").reduce((s, t) => s + Number(t.amount), 0),
-      });
-    }
-    return result;
+      };
+    });
   }, [monthTx, members]);
 
-  // Saldo livre vs gastos previstos
+  // ===== Saldo livre vs gastos previstos =====
   const allPaid = transactions.filter((t) => t.is_paid);
-  const totalReceitasPagas = allPaid.filter((t) => t.type === "receita" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0);
-  const totalDespesasPagas = allPaid.filter((t) => t.type === "despesa" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0);
-  const freeBalance = totalReceitasPagas - totalDespesasPagas;
+  const freeBalance =
+    allPaid.filter((t) => t.type === "receita" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0) -
+    allPaid.filter((t) => t.type === "despesa" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0);
   const gastosPrevistos = transactions.filter((t) => t.type === "despesa" && !t.is_paid).reduce((s, t) => s + Number(t.amount), 0);
+
+  // ===== FORECASTING: projeção baseada nos primeiros 15 dias =====
+  const forecast = useMemo(() => {
+    const [year, month] = activeMonth.split("-").map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const cutoff = 15;
+    const first15 = monthTx.filter((t) => {
+      const day = parseInt(t.date.split("-")[2], 10);
+      return t.type === "despesa" && day <= cutoff;
+    });
+    const totalFirst15 = first15.reduce((s, t) => s + Number(t.amount), 0);
+    const avgPerDay = totalFirst15 / cutoff;
+    const projected = avgPerDay * daysInMonth;
+    const totalActual = monthTx.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+    return { avgPerDay, projected, totalActual, daysInMonth, cutoff };
+  }, [monthTx, activeMonth]);
+
+  // ===== PARETO 80/20 =====
+  const pareto = useMemo(() => {
+    if (categoryData.length === 0) return { top: [], pct: 0 };
+    const total = categoryData.reduce((s, d) => s + d.value, 0);
+    let accum = 0;
+    const top: typeof categoryData = [];
+    for (const cat of categoryData) {
+      accum += cat.value;
+      top.push(cat);
+      if (accum / total >= 0.8) break;
+    }
+    return { top, pct: total > 0 ? Math.round((accum / total) * 100) : 0 };
+  }, [categoryData]);
+
+  // ===== HEATMAP: frequência de gastos por dia da semana (últimos 3 meses) =====
+  const heatmapData = useMemo(() => {
+    const today = todayISO();
+    const [y, m, d] = today.split("-").map(Number);
+    const threeMonthsAgo = new Date(Date.UTC(y, m - 4, d));
+    const startDate = threeMonthsAgo.toISOString().slice(0, 10);
+
+    // Build week grid: rows = day of week (0-6), cols = weeks
+    const dayCount = new Map<string, number>(); // "YYYY-MM-DD" -> count
+    transactions
+      .filter((t) => t.type === "despesa" && t.date >= startDate && t.date <= today)
+      .forEach((t) => {
+        dayCount.set(t.date, (dayCount.get(t.date) ?? 0) + 1);
+      });
+
+    // Build weeks array
+    const weeks: { date: string; count: number; dow: number }[][] = [];
+    let current = new Date(threeMonthsAgo);
+    const endDate = new Date(Date.UTC(y, m - 1, d));
+    let currentWeek: { date: string; count: number; dow: number }[] = [];
+
+    while (current <= endDate) {
+      const dateStr = current.toISOString().slice(0, 10);
+      const dow = current.getUTCDay();
+      currentWeek.push({ date: dateStr, count: dayCount.get(dateStr) ?? 0, dow });
+      if (dow === 6) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+      current = new Date(current.getTime() + 86400000);
+    }
+    if (currentWeek.length > 0) weeks.push(currentWeek);
+
+    // Aggregate by day of week
+    const byDow = Array.from({ length: 7 }, () => 0);
+    for (const [date, count] of dayCount) {
+      const dow = new Date(date + "T00:00:00Z").getUTCDay();
+      byDow[dow] += count;
+    }
+
+    const maxCount = Math.max(...Array.from(dayCount.values()), 1);
+    return { weeks, byDow, maxCount, dayCount };
+  }, [transactions]);
+
+  const totalDespesasMes = categoryData.reduce((s, d) => s + d.value, 0);
 
   if (authLoading || loading) {
     return <div className="flex min-h-svh items-center justify-center text-muted-foreground">Carregando...</div>;
   }
   if (!activeProfile) return null;
 
-  const totalDespesasMes = categoryData.reduce((s, d) => s + d.value, 0);
-
   return (
     <div className="min-h-svh w-full bg-background pb-16">
       <header className="sticky top-0 z-30 w-full border-b bg-background/85 backdrop-blur-md">
-        <div className="ffh-container flex items-center gap-2 px-4 py-3">
+        <div className="flex items-center gap-2 px-4 py-3">
           <Link to="/dashboard">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <h1 className="text-lg font-semibold">Análise</h1>
         </div>
-        <div className="ffh-container border-t bg-background/60 px-4 py-2">
+        <div className="border-t bg-background/60 px-4 py-2">
           <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
         </div>
       </header>
 
-      <main className="ffh-container space-y-5 px-4 pt-5">
+      <main className="space-y-5 px-4 pt-5 overflow-x-clip">
         <div className="grid gap-5 lg:grid-cols-2">
           {/* Donut — gastos por categoria */}
           <Card>
@@ -111,23 +189,12 @@ function AnalyticsPage() {
                   <div className="h-52 w-52 shrink-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie
-                          data={categoryData}
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={3}
-                          dataKey="value"
-                          nameKey="name"
-                          stroke="none"
-                        >
+                        <Pie data={categoryData} innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" nameKey="name" stroke="none">
                           {categoryData.map((_, i) => (
                             <Cell key={i} fill={COLORS[i % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          formatter={(val) => formatBRL(Number(val))}
-                          contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
-                        />
+                        <Tooltip formatter={(val) => formatBRL(Number(val))} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -177,7 +244,7 @@ function AnalyticsPage() {
           </Card>
         </div>
 
-        {/* Resumo: Saldo Livre vs Gastos Previstos */}
+        {/* Saldo Livre vs Gastos Previstos */}
         <Card className="border-0 bg-gradient-to-br from-primary/15 via-card to-[color:var(--benefit)]/10">
           <CardContent className="p-4">
             <div className="mb-3 flex items-center gap-2">
@@ -203,6 +270,142 @@ function AnalyticsPage() {
                 Após pagar tudo previsto, sobraria {formatBRL(freeBalance - gastosPrevistos)}
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* FORECASTING */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">Previsão de Gastos (Forecasting)</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">Gasto atual</p>
+                <p className="text-base font-bold tabular-nums">{formatBRL(forecast.totalActual)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">Projeção ({forecast.daysInMonth}d)</p>
+                <p className="text-base font-bold tabular-nums text-[color:var(--warning)]">{formatBRL(forecast.projected)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">Média/dia (1-{forecast.cutoff})</p>
+                <p className="text-base font-bold tabular-nums">{formatBRL(forecast.avgPerDay)}</p>
+              </div>
+            </div>
+            {forecast.projected > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                  <span>Progresso: {Math.round((forecast.totalActual / forecast.projected) * 100)}%</span>
+                  <span>{formatBRL(forecast.totalActual)} / {formatBRL(forecast.projected)}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-[color:var(--warning)] transition-all"
+                    style={{ width: `${Math.min(100, (forecast.totalActual / forecast.projected) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* PARETO 80/20 */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Flame className="h-4 w-4 text-destructive" />
+              <h2 className="text-sm font-semibold">Regra 80/20 (Pareto)</h2>
+            </div>
+            {pareto.top.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">Sem despesas para análise.</p>
+            ) : (
+              <>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {pareto.top.length === 1 ? "1 categoria consome" : `${pareto.top.length} categorias consomem`} {pareto.pct}% do orçamento:
+                </p>
+                <div className="space-y-2">
+                  {pareto.top.map((cat, i) => {
+                    const pct = totalDespesasMes > 0 ? Math.round((cat.value / totalDespesasMes) * 100) : 0;
+                    return (
+                      <div key={cat.name} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5">
+                            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                            <span className="font-medium">{cat.name}</span>
+                          </span>
+                          <span className="tabular-nums text-muted-foreground">{formatBRL(cat.value)} • {pct}%</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-destructive/70" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* HEATMAP */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">Heatmap de Frequência (3 meses)</h2>
+            </div>
+            {/* Day-of-week summary */}
+            <div className="mb-4 flex gap-1.5 flex-wrap">
+              {DAY_LABELS.map((label, dow) => {
+                const maxDow = Math.max(...heatmapData.byDow, 1);
+                const intensity = heatmapData.byDow[dow] / maxDow;
+                return (
+                  <div key={dow} className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{label}</span>
+                    <div
+                      className="h-8 w-8 rounded-md flex items-center justify-center text-[10px] font-medium"
+                      style={{
+                        backgroundColor: intensity === 0
+                          ? "var(--muted)"
+                          : `color-mix(in oklch, var(--primary) ${Math.round(intensity * 100)}%, var(--muted))`,
+                        color: intensity > 0.5 ? "var(--primary-foreground)" : "var(--foreground)",
+                      }}
+                    >
+                      {heatmapData.byDow[dow]}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Calendar grid */}
+            <div className="flex gap-[3px] overflow-x-auto pb-1">
+              {heatmapData.weeks.map((week, wi) => (
+                <div key={wi} className="flex flex-col gap-[3px]">
+                  {Array.from({ length: 7 }, (_, dow) => {
+                    const cell = week.find((c) => c.dow === dow);
+                    if (!cell) return <div key={dow} className="h-3 w-3 rounded-sm" />;
+                    const intensity = cell.count / heatmapData.maxCount;
+                    return (
+                      <div
+                        key={dow}
+                        className="h-3 w-3 rounded-sm"
+                        title={`${cell.date}: ${cell.count} despesa(s)`}
+                        style={{
+                          backgroundColor: cell.count === 0
+                            ? "var(--muted)"
+                            : `color-mix(in oklch, var(--primary) ${Math.round(Math.max(20, intensity * 100))}%, var(--muted))`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Dias mais escuros = mais transações de despesa
+            </p>
           </CardContent>
         </Card>
       </main>
