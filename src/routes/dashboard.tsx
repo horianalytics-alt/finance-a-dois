@@ -170,7 +170,7 @@ function DashboardPage() {
   return (
     <div className="min-h-svh w-full bg-background pb-32">
       {/* Header sticky — full viewport width, content centered via ffh-container */}
-      <header className="sticky top-0 z-30 w-full border-b bg-background/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 w-full border-b bg-background">
         <div className="w-full !left-0 !right-0">
           <div className="flex items-center justify-between gap-2 px-4 py-3">
             <ProfileSwitcher />
