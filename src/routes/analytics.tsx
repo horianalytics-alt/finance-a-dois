@@ -78,6 +78,12 @@ function AnalyticsPage() {
     allPaid.filter((t) => t.type === "despesa" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0);
   const gastosPrevistos = transactions.filter((t) => t.type === "despesa" && !t.is_paid).reduce((s, t) => s + Number(t.amount), 0);
 
+  // ===== Patrimônio Total (histórico completo) =====
+  const totalReceitas = allPaid.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+  const totalDespesas = allPaid.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+  const totalInvest = allPaid.filter((t) => t.type === "investimento").reduce((s, t) => s + Number(t.amount), 0);
+  const patrimonio = totalReceitas - totalDespesas - totalInvest;
+
   // ===== FORECASTING: projeção baseada nos primeiros 15 dias =====
   const forecast = useMemo(() => {
     const [year, month] = activeMonth.split("-").map(Number);
