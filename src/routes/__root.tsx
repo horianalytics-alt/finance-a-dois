@@ -29,7 +29,7 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
       { name: "theme-color", content: "#1e40af" },
       { title: "Family Finance Hub" },
       { name: "description", content: "Gestão financeira simples e elegante para casais" },
