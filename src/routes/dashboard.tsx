@@ -168,27 +168,25 @@ function DashboardPage() {
   if (!activeProfile) return null;
 
   return (
-    <div className="min-h-svh w-full bg-background pb-32">
+    <div className="min-h-svh w-full bg-background pb-32 overflow-x-hidden">
       {/* Header sticky — full viewport width, content centered via ffh-container */}
       <header className="sticky top-0 z-30 w-full border-b bg-background">
-        <div className="w-full !left-0 !right-0">
-          <div className="flex items-center justify-between gap-2 px-4 py-3">
-            <ProfileSwitcher />
-            <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="icon" onClick={toggleHideValues} aria-label="Ocultar valores">
-                {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </Button>
-              <PaletteSwitcher />
-              <ThemeToggle />
-              <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
-              <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
-              <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
-              <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>
-            </div>
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          <ProfileSwitcher />
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="icon" onClick={toggleHideValues} aria-label="Ocultar valores">
+              {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
+            <PaletteSwitcher />
+            <ThemeToggle />
+            <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
+            <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
+            <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
+            <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>
           </div>
-          <div className="border-t bg-background/60 px-4 py-2">
-            <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
-          </div>
+        </div>
+        <div className="border-t bg-background/60 px-4 py-2">
+          <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
         </div>
       </header>
 
