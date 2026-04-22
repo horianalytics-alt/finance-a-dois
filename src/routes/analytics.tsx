@@ -279,6 +279,34 @@ function AnalyticsPage() {
           </CardContent>
         </Card>
 
+        {/* PATRIMÔNIO TOTAL */}
+        <Card className="border-0 bg-gradient-to-br from-[color:var(--investment)]/15 via-card to-primary/10">
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-[color:var(--investment)]" />
+              <h2 className="text-sm font-semibold">Patrimônio Total (histórico)</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="space-y-1 text-center">
+                <p className="text-[10px] text-muted-foreground">Receitas</p>
+                <p className="text-base font-bold tabular-nums text-[color:var(--success)]">{formatBRL(totalReceitas)}</p>
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-[10px] text-muted-foreground">Despesas</p>
+                <p className="text-base font-bold tabular-nums text-destructive">{formatBRL(totalDespesas)}</p>
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-[10px] text-muted-foreground">Investimentos</p>
+                <p className="text-base font-bold tabular-nums text-[color:var(--investment)]">{formatBRL(totalInvest)}</p>
+              </div>
+              <div className="space-y-1 text-center">
+                <p className="text-[10px] text-muted-foreground">Saldo Acumulado</p>
+                <p className={`text-base font-bold tabular-nums ${patrimonio >= 0 ? "text-[color:var(--success)]" : "text-destructive"}`}>{formatBRL(patrimonio)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* FORECASTING */}
         <Card>
           <CardContent className="p-4">
