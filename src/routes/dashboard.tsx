@@ -202,7 +202,7 @@ function DashboardPage() {
           </div>
         </header>
 
-     <main className="w-full space-y-5 px-4 pt-5 overflow-x-clip">
+     <main className="w-full space-y-5 px-4 pt-5">
         {/* 8 CARDS — grid 2 col mobile, 4 col desktop */}
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
           <SummaryCard label="Receitas (pagas)" value={fmtCompact(totalReceitasPagas)} icon={<ArrowDownCircle className="h-4 w-4" />} tone="success" />
