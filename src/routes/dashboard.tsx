@@ -71,29 +71,26 @@ function DashboardPage() {
       .filter((t) => (paid === undefined ? true : t.is_paid === paid))
       .reduce((s, t) => s + Number(t.amount), 0);
 
-  const allPaid = transactions.filter((t) => t.is_paid);
-  const totalReceitasPagas = sumBy(allPaid, "receita");
-  const totalDespesasPagas = sumBy(allPaid, "despesa");
-  const totalInvestPagas = sumBy(allPaid, "investimento");
+  const monthPaid = monthTx.filter((t) => t.is_paid);
+  const totalReceitasPagas = sumBy(monthPaid, "receita");
+  const totalDespesasPagas = sumBy(monthPaid, "despesa");
+  const totalInvestPagas = sumBy(monthPaid, "investimento");
 
   const benefitBalance =
-    sumBy(allPaid, "receita", true) - sumBy(allPaid, "despesa", true);
+    sumBy(monthPaid, "receita", true) - sumBy(monthPaid, "despesa", true);
   const freeBalance =
-    sumBy(allPaid, "receita", false) - sumBy(allPaid, "despesa", false);
+    sumBy(monthPaid, "receita", false) - sumBy(monthPaid, "despesa", false);
 
-  const aPagar = sumBy(transactions, "despesa", undefined, false);
-  const aReceber = sumBy(transactions, "receita", undefined, false);
+  const aPagar = sumBy(monthTx, "despesa", undefined, false);
+  const aReceber = sumBy(monthTx, "receita", undefined, false);
 
   const today = todayISO();
-  const thirtyDaysAgo = (() => {
-    const [y, m, d] = today.split("-").map(Number);
-    const dt = new Date(Date.UTC(y, m - 1, d - 30));
-    return dt.toISOString().slice(0, 10);
-  })();
-  const last30Despesas = transactions
-    .filter((t) => t.type === "despesa" && t.is_paid && t.date >= thirtyDaysAgo && t.date <= today)
+  const [activeY, activeM] = activeMonth.split("-").map(Number);
+  const daysInActiveMonth = new Date(activeY, activeM, 0).getDate();
+  const monthDespesas = monthTx
+    .filter((t) => t.type === "despesa" && t.is_paid)
     .reduce((s, t) => s + Number(t.amount), 0);
-  const avgPerDay = last30Despesas / 30;
+  const avgPerDay = monthDespesas / daysInActiveMonth;
   const runwayDays = avgPerDay > 0 ? Math.floor(freeBalance / avgPerDay) : null;
 
   const topByOwner = useMemo(() => {
@@ -173,7 +170,7 @@ function DashboardPage() {
       <DesktopSidebar hideValues={hideValues} toggleHideValues={toggleHideValues} />
       <div className="min-h-svh w-full bg-background pb-32 lg:pl-56">
         {/* Header sticky — hidden sidebar nav on mobile, simplified on desktop */}
-        <header className="sticky top-0 z-30 w-full border-b bg-background">
+        <header className="sticky top-0 z-30 w-full border-b bg-background" style={{ backgroundColor: 'var(--color-background)' }}>
           <div className="flex items-center justify-between gap-2 px-4 py-3">
             <div className="lg:hidden"><ProfileSwitcher /></div>
             <div className="hidden lg:block">
