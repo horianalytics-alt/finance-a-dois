@@ -168,7 +168,7 @@ function DashboardPage() {
   if (!activeProfile) return null;
 
   return (
-    <div className="min-h-svh w-full bg-background pb-32">
+    <div className="min-h-svh w-full bg-background pb-32 overflow-x-hidden">
       {/* Header sticky — full viewport width, content centered via ffh-container */}
       <header className="sticky top-0 z-30 w-full border-b bg-background">
         <div className="w-full !left-0 !right-0">
