@@ -381,7 +381,8 @@ function DashboardPage() {
           <Plus className="h-6 w-6" />
         </Button>
       </Link>
-    </div>
+      </div>
+    </>
   );
 }
 
