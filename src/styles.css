@@ -187,10 +187,4 @@
     margin-right: auto;
   }
 
-  /* Técnica da Sombra Infinita: estica a cor sem travar o zoom */
-  header {
-    background-color: var(--color-background) !important;
-    box-shadow: 0 0 0 100vmax var(--color-background) !important;
-    clip-path: inset(0 -100vmax) !important;
-  }
 }
