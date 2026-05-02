@@ -54,6 +54,17 @@ export type PaymentMethod = {
   sort_order: number;
 };
 
+export type AccountType = "corrente" | "beneficio";
+
+export type Account = {
+  id: string;
+  family_id: string;
+  name: string;
+  type: AccountType;
+  icon: string | null;
+  sort_order: number;
+};
+
 export type Transaction = {
   id: string;
   family_id: string;
