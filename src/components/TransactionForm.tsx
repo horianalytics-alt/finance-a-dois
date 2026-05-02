@@ -153,6 +153,10 @@ export function TransactionForm({
       toast.error("Selecione o responsável.");
       return;
     }
+    if (!accountId) {
+      toast.error("Selecione a conta.");
+      return;
+    }
 
     const main: TransactionFormValue = {
       date: iso,
@@ -162,6 +166,7 @@ export function TransactionForm({
       amount: value,
       paid_date: paidIso,
       payment_method_id: pmId,
+      account_id: accountId,
       is_paid: isPaid,
       is_benefit: isBenefit,
       recurrence_months: months,
@@ -183,6 +188,10 @@ export function TransactionForm({
         toast.error(`Responsável vazio em "${r.description}".`);
         return;
       }
+      if (!r.account_id) {
+        toast.error(`Conta não selecionada em "${r.description}".`);
+        return;
+      }
       all.push({
         date: iso, // herda data do principal
         type: r.type,
@@ -191,6 +200,7 @@ export function TransactionForm({
         amount: v,
         paid_date: r.is_paid ? (brToISO(paidDate) ?? iso) : null,
         payment_method_id: r.payment_method_id,
+        account_id: r.account_id,
         is_paid: r.is_paid,
         is_benefit: r.is_benefit,
         recurrence_months: 1,
