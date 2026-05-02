@@ -84,6 +84,7 @@ export type Transaction = {
   recurrence_index: number;
   recurrence_parent_id: string | null;
   paid_date: string | null;
+  account_id: string;
 };
 
 interface AppContextValue {
@@ -95,6 +96,7 @@ interface AppContextValue {
   setActiveProfile: (id: string) => void;
   categories: Category[];
   paymentMethods: PaymentMethod[];
+  accounts: Account[];
   transactions: Transaction[];
   hideValues: boolean;
   toggleHideValues: () => void;
