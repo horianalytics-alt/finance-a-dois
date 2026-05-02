@@ -72,6 +72,7 @@ function NewTransactionPage() {
           date: addMonthsISO(main.date, i + 1),
           category_id: main.category_id,
           payment_method_id: main.payment_method_id,
+          account_id: main.account_id,
           is_paid: false,
           is_benefit: main.is_benefit,
           recurrence_months: main.recurrence_months,
