@@ -9,17 +9,17 @@
 //   - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (auto)
 //
 // Esta função é PÚBLICA (verify_jwt=false) porque é chamada por um trigger
-// do banco que não tem token de usuário. A segurança vem de:
-//   1) só processa payloads vindos do próprio Postgres (mesma região)
-//   2) usa service role pra ler push_subscriptions
-//   3) só envia pra subscriptions da mesma family_id da transação
+// do banco. A segurança vem de:
+//   1) header `x-trigger-secret` deve bater com o segredo guardado em
+//      public._app_secrets (lido via service role)
+//   2) só envia pra subscriptions da mesma family_id da transação
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import webpush from "https://esm.sh/web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-trigger-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -42,6 +42,15 @@ function formatBRL(n: number) {
   }).format(n);
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -62,6 +71,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    const admin = createClient(SB_URL, SB_SERVICE);
+
+    // Validate caller secret
+    const providedSecret = req.headers.get("x-trigger-secret") ?? "";
+    const { data: secretRow, error: secretErr } = await admin
+      .from("_app_secrets")
+      .select("value")
+      .eq("key", "trigger_secret")
+      .maybeSingle();
+
+    if (secretErr || !secretRow?.value) {
+      console.error("Trigger secret not configured", secretErr);
+      return new Response(JSON.stringify({ ok: false, reason: "secret_unconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!timingSafeEqual(providedSecret, secretRow.value)) {
+      return new Response(JSON.stringify({ ok: false, reason: "forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const tx = (await req.json()) as TxPayload;
     if (!tx?.family_id || !tx?.created_by_id) {
       return new Response(JSON.stringify({ ok: false, reason: "bad_payload" }), {
@@ -71,8 +105,6 @@ Deno.serve(async (req) => {
     }
 
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
-
-    const admin = createClient(SB_URL, SB_SERVICE);
 
     // Pega subscriptions da família, exceto do autor
     const { data: subs, error: subErr } = await admin
