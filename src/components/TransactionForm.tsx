@@ -22,6 +22,7 @@ export interface TransactionFormValue {
   amount: number;
   paid_date: string | null;
   payment_method_id: string | null;
+  account_id: string;
   is_paid: boolean;
   is_benefit: boolean;
   recurrence_months: number;
@@ -36,6 +37,7 @@ interface ExtraRow {
   owner_profile_id: string;
   type: TxType;
   payment_method_id: string | null;
+  account_id: string | null;
   is_paid: boolean;
   is_benefit: boolean;
 }
@@ -61,7 +63,9 @@ export function TransactionForm({
   hideRecurrence,
   allowBulk = false,
 }: Props) {
-  const { categories, paymentMethods, members, activeProfile } = useApp();
+  const { categories, paymentMethods, accounts, members, activeProfile } = useApp();
+
+  const defaultAccountId = (initial as Partial<Transaction> | undefined)?.account_id ?? null;
 
   const [date, setDate] = useState(() =>
     initial?.date ? isoToBR(initial.date) : todayBR(),
@@ -74,6 +78,7 @@ export function TransactionForm({
   );
   const [paidDate, setPaidDate] = useState(initial?.paid_date ? isoToBR(initial.paid_date) : "");
   const [pmId, setPmId] = useState<string | null>(initial?.payment_method_id ?? null);
+  const [accountId, setAccountId] = useState<string | null>(defaultAccountId);
   const [isPaid, setIsPaid] = useState(initial?.is_paid ?? true);
   const [isBenefit, setIsBenefit] = useState(initial?.is_benefit ?? false);
   const [recurrence, setRecurrence] = useState(String(initial?.recurrence_months ?? 1));
@@ -94,7 +99,15 @@ export function TransactionForm({
     if (!ownerId && activeProfile) setOwnerId(activeProfile.id);
   }, [ownerId, activeProfile]);
 
+  // Default conta = primeira conta corrente disponível
+  useEffect(() => {
+    if (accountId || accounts.length === 0) return;
+    const corrente = accounts.find((a) => a.type === "corrente");
+    setAccountId((corrente ?? accounts[0]).id);
+  }, [accountId, accounts]);
+
   const filteredCategories = categories.filter((c) => c.type === type);
+  const accountLabel = type === "receita" ? "Conta de Destino" : "Conta de Origem";
 
   const addExtra = () => {
     setExtras((prev) => [
@@ -107,6 +120,7 @@ export function TransactionForm({
         owner_profile_id: ownerId || activeProfile?.id || "",
         type,
         payment_method_id: pmId,
+        account_id: accountId,
         is_paid: isPaid,
         is_benefit: isBenefit,
       },
@@ -139,6 +153,10 @@ export function TransactionForm({
       toast.error("Selecione o responsável.");
       return;
     }
+    if (!accountId) {
+      toast.error("Selecione a conta.");
+      return;
+    }
 
     const main: TransactionFormValue = {
       date: iso,
@@ -148,6 +166,7 @@ export function TransactionForm({
       amount: value,
       paid_date: paidIso,
       payment_method_id: pmId,
+      account_id: accountId,
       is_paid: isPaid,
       is_benefit: isBenefit,
       recurrence_months: months,
@@ -169,6 +188,10 @@ export function TransactionForm({
         toast.error(`Responsável vazio em "${r.description}".`);
         return;
       }
+      if (!r.account_id) {
+        toast.error(`Conta não selecionada em "${r.description}".`);
+        return;
+      }
       all.push({
         date: iso, // herda data do principal
         type: r.type,
@@ -177,6 +200,7 @@ export function TransactionForm({
         amount: v,
         paid_date: r.is_paid ? (brToISO(paidDate) ?? iso) : null,
         payment_method_id: r.payment_method_id,
+        account_id: r.account_id,
         is_paid: r.is_paid,
         is_benefit: r.is_benefit,
         recurrence_months: 1,
@@ -288,6 +312,18 @@ export function TransactionForm({
               value={paidDate}
               onChange={setPaidDate}
               placeholder="opcional — usa a data acima"
+            />
+          </div>
+
+          {/* Conta (origem/destino) */}
+          <div className="space-y-2">
+            <Label>{accountLabel}</Label>
+            <SearchableSelect
+              options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+              value={accountId}
+              onChange={setAccountId}
+              placeholder="Selecione uma conta"
+              emptyText="Crie contas em Configurações de Dados"
             />
           </div>
 
@@ -411,6 +447,13 @@ export function TransactionForm({
                           onChange={(e) => updateExtra(row.id, { amount: e.target.value })}
                         />
                       </div>
+                      {/* Conta */}
+                      <SearchableSelect
+                        options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+                        value={row.account_id}
+                        onChange={(v) => updateExtra(row.id, { account_id: v })}
+                        placeholder={row.type === "receita" ? "Conta de destino" : "Conta de origem"}
+                      />
                       {/* Forma de pagamento */}
                       <SearchableSelect
                         options={paymentMethods.map((p) => ({ value: p.id, label: p.name }))}

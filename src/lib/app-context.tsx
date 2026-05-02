@@ -54,6 +54,17 @@ export type PaymentMethod = {
   sort_order: number;
 };
 
+export type AccountType = "corrente" | "beneficio";
+
+export type Account = {
+  id: string;
+  family_id: string;
+  name: string;
+  type: AccountType;
+  icon: string | null;
+  sort_order: number;
+};
+
 export type Transaction = {
   id: string;
   family_id: string;
@@ -73,6 +84,7 @@ export type Transaction = {
   recurrence_index: number;
   recurrence_parent_id: string | null;
   paid_date: string | null;
+  account_id: string;
 };
 
 interface AppContextValue {
@@ -84,6 +96,7 @@ interface AppContextValue {
   setActiveProfile: (id: string) => void;
   categories: Category[];
   paymentMethods: PaymentMethod[];
+  accounts: Account[];
   transactions: Transaction[];
   hideValues: boolean;
   toggleHideValues: () => void;
@@ -107,6 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeProfileId, setActiveProfileIdState] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
@@ -142,16 +156,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadAll = useCallback(async (familyId: string) => {
-    const [memRes, catRes, pmRes, txRes, famRes] = await Promise.all([
+    const [memRes, catRes, pmRes, accRes, txRes, famRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("family_id", familyId).order("created_at"),
       supabase.from("categories").select("*").eq("family_id", familyId).order("sort_order"),
       supabase.from("payment_methods").select("*").eq("family_id", familyId).order("sort_order"),
+      supabase.from("accounts").select("*").eq("family_id", familyId).order("sort_order"),
       supabase.from("transactions").select("*").eq("family_id", familyId).order("date", { ascending: false }).limit(2000),
       supabase.from("families").select("*").eq("id", familyId).maybeSingle(),
     ]);
     if (memRes.data) setMembers(memRes.data as Profile[]);
     if (catRes.data) setCategories(catRes.data as Category[]);
     if (pmRes.data) setPaymentMethods(pmRes.data as PaymentMethod[]);
+    if (accRes.data) setAccounts(accRes.data as Account[]);
     if (txRes.data) setTransactions(txRes.data as Transaction[]);
     if (famRes.data) setFamily(famRes.data as Family);
   }, []);
@@ -333,6 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveProfileIdState(null);
     setCategories([]);
     setPaymentMethods([]);
+    setAccounts([]);
     setTransactions([]);
   }, []);
 
@@ -351,6 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveProfile,
       categories,
       paymentMethods,
+      accounts,
       transactions,
       hideValues,
       toggleHideValues,
@@ -371,6 +389,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveProfile,
       categories,
       paymentMethods,
+      accounts,
       transactions,
       hideValues,
       toggleHideValues,

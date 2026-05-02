@@ -29,6 +29,39 @@ export type Database = {
         }
         Relationships: []
       }
+      accounts: {
+        Row: {
+          created_at: string
+          family_id: string
+          icon: string | null
+          id: string
+          name: string
+          sort_order: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          icon?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -211,6 +244,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          account_id: string
           amount: number
           category_id: string | null
           created_at: string
@@ -233,6 +267,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id: string
           amount: number
           category_id?: string | null
           created_at?: string
@@ -255,6 +290,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string
           amount?: number
           category_id?: string | null
           created_at?: string
@@ -277,6 +313,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_category_id_fkey"
             columns: ["category_id"]

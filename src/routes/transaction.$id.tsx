@@ -62,6 +62,7 @@ function EditTransactionPage() {
         date: v.date,
         category_id: v.category_id,
         payment_method_id: v.payment_method_id,
+        account_id: v.account_id,
         is_paid: v.is_paid,
         is_benefit: v.is_benefit,
         paid_date: v.paid_date,
@@ -69,14 +70,12 @@ function EditTransactionPage() {
       };
 
       if (isRecurring && applyToSeries) {
-        // Atualiza tudo: a mãe + filhas (mas mantém datas individuais por padrão).
-        // Estratégia: atualiza description/category/pm/type/owner/is_benefit em TODAS,
-        // e mantém date/amount/is_paid/paid_date apenas na atual (essas são "por parcela").
         const seriesPatch = {
           type: v.type,
           description: v.description,
           category_id: v.category_id,
           payment_method_id: v.payment_method_id,
+          account_id: v.account_id,
           is_benefit: v.is_benefit,
           profile_id: v.owner_profile_id,
         };
