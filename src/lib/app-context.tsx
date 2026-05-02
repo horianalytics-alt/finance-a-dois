@@ -120,6 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeProfileId, setActiveProfileIdState] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
