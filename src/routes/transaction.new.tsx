@@ -97,6 +97,7 @@ function NewTransactionPage() {
           date: v.date,
           category_id: v.category_id,
           payment_method_id: v.payment_method_id,
+          account_id: v.account_id,
           is_paid: v.is_paid,
           is_benefit: v.is_benefit,
           recurrence_months: 1,
