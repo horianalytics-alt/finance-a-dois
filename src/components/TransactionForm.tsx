@@ -63,7 +63,9 @@ export function TransactionForm({
   hideRecurrence,
   allowBulk = false,
 }: Props) {
-  const { categories, paymentMethods, members, activeProfile } = useApp();
+  const { categories, paymentMethods, accounts, members, activeProfile } = useApp();
+
+  const defaultAccountId = (initial as Partial<Transaction> | undefined)?.account_id ?? null;
 
   const [date, setDate] = useState(() =>
     initial?.date ? isoToBR(initial.date) : todayBR(),
@@ -76,6 +78,7 @@ export function TransactionForm({
   );
   const [paidDate, setPaidDate] = useState(initial?.paid_date ? isoToBR(initial.paid_date) : "");
   const [pmId, setPmId] = useState<string | null>(initial?.payment_method_id ?? null);
+  const [accountId, setAccountId] = useState<string | null>(defaultAccountId);
   const [isPaid, setIsPaid] = useState(initial?.is_paid ?? true);
   const [isBenefit, setIsBenefit] = useState(initial?.is_benefit ?? false);
   const [recurrence, setRecurrence] = useState(String(initial?.recurrence_months ?? 1));
@@ -96,7 +99,15 @@ export function TransactionForm({
     if (!ownerId && activeProfile) setOwnerId(activeProfile.id);
   }, [ownerId, activeProfile]);
 
+  // Default conta = primeira conta corrente disponível
+  useEffect(() => {
+    if (accountId || accounts.length === 0) return;
+    const corrente = accounts.find((a) => a.type === "corrente");
+    setAccountId((corrente ?? accounts[0]).id);
+  }, [accountId, accounts]);
+
   const filteredCategories = categories.filter((c) => c.type === type);
+  const accountLabel = type === "receita" ? "Conta de Destino" : "Conta de Origem";
 
   const addExtra = () => {
     setExtras((prev) => [
@@ -109,6 +120,7 @@ export function TransactionForm({
         owner_profile_id: ownerId || activeProfile?.id || "",
         type,
         payment_method_id: pmId,
+        account_id: accountId,
         is_paid: isPaid,
         is_benefit: isBenefit,
       },
