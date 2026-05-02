@@ -22,6 +22,7 @@ export interface TransactionFormValue {
   amount: number;
   paid_date: string | null;
   payment_method_id: string | null;
+  account_id: string;
   is_paid: boolean;
   is_benefit: boolean;
   recurrence_months: number;
@@ -36,6 +37,7 @@ interface ExtraRow {
   owner_profile_id: string;
   type: TxType;
   payment_method_id: string | null;
+  account_id: string | null;
   is_paid: boolean;
   is_benefit: boolean;
 }
