@@ -349,6 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveProfileIdState(null);
     setCategories([]);
     setPaymentMethods([]);
+    setAccounts([]);
     setTransactions([]);
   }, []);
 
@@ -367,6 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveProfile,
       categories,
       paymentMethods,
+      accounts,
       transactions,
       hideValues,
       toggleHideValues,
@@ -387,6 +389,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveProfile,
       categories,
       paymentMethods,
+      accounts,
       transactions,
       hideValues,
       toggleHideValues,
