@@ -156,16 +156,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadAll = useCallback(async (familyId: string) => {
-    const [memRes, catRes, pmRes, txRes, famRes] = await Promise.all([
+    const [memRes, catRes, pmRes, accRes, txRes, famRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("family_id", familyId).order("created_at"),
       supabase.from("categories").select("*").eq("family_id", familyId).order("sort_order"),
       supabase.from("payment_methods").select("*").eq("family_id", familyId).order("sort_order"),
+      supabase.from("accounts").select("*").eq("family_id", familyId).order("sort_order"),
       supabase.from("transactions").select("*").eq("family_id", familyId).order("date", { ascending: false }).limit(2000),
       supabase.from("families").select("*").eq("id", familyId).maybeSingle(),
     ]);
     if (memRes.data) setMembers(memRes.data as Profile[]);
     if (catRes.data) setCategories(catRes.data as Category[]);
     if (pmRes.data) setPaymentMethods(pmRes.data as PaymentMethod[]);
+    if (accRes.data) setAccounts(accRes.data as Account[]);
     if (txRes.data) setTransactions(txRes.data as Transaction[]);
     if (famRes.data) setFamily(famRes.data as Family);
   }, []);
