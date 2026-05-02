@@ -447,6 +447,13 @@ export function TransactionForm({
                           onChange={(e) => updateExtra(row.id, { amount: e.target.value })}
                         />
                       </div>
+                      {/* Conta */}
+                      <SearchableSelect
+                        options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+                        value={row.account_id}
+                        onChange={(v) => updateExtra(row.id, { account_id: v })}
+                        placeholder={row.type === "receita" ? "Conta de destino" : "Conta de origem"}
+                      />
                       {/* Forma de pagamento */}
                       <SearchableSelect
                         options={paymentMethods.map((p) => ({ value: p.id, label: p.name }))}
