@@ -315,6 +315,18 @@ export function TransactionForm({
             />
           </div>
 
+          {/* Conta (origem/destino) */}
+          <div className="space-y-2">
+            <Label>{accountLabel}</Label>
+            <SearchableSelect
+              options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+              value={accountId}
+              onChange={setAccountId}
+              placeholder="Selecione uma conta"
+              emptyText="Crie contas em Configurações de Dados"
+            />
+          </div>
+
           {/* Forma de pagamento */}
           <div className="space-y-2">
             <Label>Forma de pagamento</Label>
