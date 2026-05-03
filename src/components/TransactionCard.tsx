@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatBRL, formatCreatedTime, isoToBR, maskedBRL } from "@/lib/format";
-import type { Category, PaymentMethod, Profile, Transaction } from "@/lib/app-context";
+import type { Account, Category, PaymentMethod, Profile, Transaction } from "@/lib/app-context";
 
 interface Props {
   tx: Transaction;
