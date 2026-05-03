@@ -71,11 +71,12 @@ function AnalyticsPage() {
     });
   }, [monthTx, members]);
 
-  // ===== Saldo livre vs gastos previstos =====
+  // ===== Saldo livre vs gastos previstos (somente contas correntes) =====
+  const correnteIds = new Set(accounts.filter((a) => a.type === "corrente").map((a) => a.id));
   const allPaid = transactions.filter((t) => t.is_paid);
   const freeBalance =
-    allPaid.filter((t) => t.type === "receita" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0) -
-    allPaid.filter((t) => t.type === "despesa" && !t.is_benefit).reduce((s, t) => s + Number(t.amount), 0);
+    allPaid.filter((t) => t.type === "receita" && correnteIds.has(t.account_id)).reduce((s, t) => s + Number(t.amount), 0) -
+    allPaid.filter((t) => t.type === "despesa" && correnteIds.has(t.account_id)).reduce((s, t) => s + Number(t.amount), 0);
   const gastosPrevistos = transactions.filter((t) => t.type === "despesa" && !t.is_paid).reduce((s, t) => s + Number(t.amount), 0);
 
   // ===== Patrimônio Total (histórico completo) =====
