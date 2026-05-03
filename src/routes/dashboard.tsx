@@ -40,7 +40,7 @@ type SortMode = "recent" | "old" | "highest" | "lowest";
 function DashboardPage() {
   const { session, loading: authLoading } = useAuth();
   const {
-    loading, activeProfile, members, categories, paymentMethods, transactions,
+    loading, activeProfile, members, categories, paymentMethods, accounts, transactions,
     hideValues, toggleHideValues, needsOnboarding, newTxIds, acknowledgeNewTx, refresh,
   } = useApp();
   const navigate = useNavigate();
