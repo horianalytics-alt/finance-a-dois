@@ -21,6 +21,7 @@ import {
   ArrowUpCircle,
   PiggyBank,
   CreditCard,
+  Wallet,
 } from "lucide-react";
 
 export const Route = createFileRoute("/data")({
