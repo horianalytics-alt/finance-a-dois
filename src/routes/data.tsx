@@ -51,22 +51,26 @@ function DataPage() {
 
       <div className="px-4 pt-4">
         <Tabs defaultValue="receita" className="space-y-3">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="receita" className="gap-1.5 text-xs">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="receita" className="gap-1 text-[11px]">
               <ArrowDownCircle className="h-3.5 w-3.5" />
-              Receita
+              Rec.
             </TabsTrigger>
-            <TabsTrigger value="despesa" className="gap-1.5 text-xs">
+            <TabsTrigger value="despesa" className="gap-1 text-[11px]">
               <ArrowUpCircle className="h-3.5 w-3.5" />
-              Despesa
+              Desp.
             </TabsTrigger>
-            <TabsTrigger value="investimento" className="gap-1.5 text-xs">
+            <TabsTrigger value="investimento" className="gap-1 text-[11px]">
               <PiggyBank className="h-3.5 w-3.5" />
-              Invest.
+              Inv.
             </TabsTrigger>
-            <TabsTrigger value="payment" className="gap-1.5 text-xs">
+            <TabsTrigger value="payment" className="gap-1 text-[11px]">
               <CreditCard className="h-3.5 w-3.5" />
               Pagto.
+            </TabsTrigger>
+            <TabsTrigger value="account" className="gap-1 text-[11px]">
+              <Wallet className="h-3.5 w-3.5" />
+              Contas
             </TabsTrigger>
           </TabsList>
           <TabsContent value="receita">
