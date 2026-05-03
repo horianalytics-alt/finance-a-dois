@@ -40,7 +40,7 @@ type SortMode = "recent" | "old" | "highest" | "lowest";
 function DashboardPage() {
   const { session, loading: authLoading } = useAuth();
   const {
-    loading, activeProfile, members, categories, paymentMethods, transactions,
+    loading, activeProfile, members, categories, paymentMethods, accounts, transactions,
     hideValues, toggleHideValues, needsOnboarding, newTxIds, acknowledgeNewTx, refresh,
   } = useApp();
   const navigate = useNavigate();
@@ -58,16 +58,14 @@ function DashboardPage() {
     [transactions, activeMonth],
   );
 
-  // ===== 8 CARDS — somas em precisão decimal (Number sobre numeric do PG) =====
+  // ===== Somas mensais =====
   const sumBy = (
     list: Transaction[],
     type: Transaction["type"],
-    isBenefit?: boolean,
     paid?: boolean,
   ) =>
     list
       .filter((t) => t.type === type)
-      .filter((t) => (isBenefit === undefined ? true : t.is_benefit === isBenefit))
       .filter((t) => (paid === undefined ? true : t.is_paid === paid))
       .reduce((s, t) => s + Number(t.amount), 0);
 
@@ -76,13 +74,22 @@ function DashboardPage() {
   const totalDespesasPagas = sumBy(monthPaid, "despesa");
   const totalInvestPagas = sumBy(monthPaid, "investimento");
 
-  const benefitBalance =
-    sumBy(monthPaid, "receita", true) - sumBy(monthPaid, "despesa", true);
-  const freeBalance =
-    sumBy(monthPaid, "receita", false) - sumBy(monthPaid, "despesa", false);
+  // Saldo por conta (dinâmico)
+  const accountBalances = useMemo(() => {
+    return accounts.map((a) => {
+      const txs = monthPaid.filter((t) => t.account_id === a.id);
+      const receita = txs.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+      const despesa = txs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+      return { account: a, balance: receita - despesa };
+    });
+  }, [accounts, monthPaid]);
 
-  const aPagar = sumBy(monthTx, "despesa", undefined, false);
-  const aReceber = sumBy(monthTx, "receita", undefined, false);
+  const freeBalance = accountBalances
+    .filter((b) => b.account.type === "corrente")
+    .reduce((s, b) => s + b.balance, 0);
+
+  const aPagar = sumBy(monthTx, "despesa", false);
+  const aReceber = sumBy(monthTx, "receita", false);
 
   const today = todayISO();
   const [activeY, activeM] = activeMonth.split("-").map(Number);
@@ -200,17 +207,37 @@ function DashboardPage() {
         </header>
 
      <main className="w-full space-y-5 px-4 pt-5">
-        {/* 8 CARDS — grid 2 col mobile, 4 col desktop */}
+        {/* Cards de resumo (tipo) */}
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
           <SummaryCard label="Receitas (pagas)" value={fmtCompact(totalReceitasPagas)} icon={<ArrowDownCircle className="h-4 w-4" />} tone="success" />
           <SummaryCard label="Despesas (pagas)" value={fmtCompact(totalDespesasPagas)} icon={<ArrowUpCircle className="h-4 w-4" />} tone="destructive" />
           <SummaryCard label="Investimentos" value={fmtCompact(totalInvestPagas)} icon={<PiggyBank className="h-4 w-4" />} tone="investment" />
-          <SummaryCard label="Saldo Livre" value={fmt(freeBalance)} icon={<Wallet className="h-4 w-4" />} tone="primary" highlight />
-          <SummaryCard label="Saldo Benefícios" value={fmt(benefitBalance)} icon={<Sparkles className="h-4 w-4" />} tone="benefit" highlight />
+          <SummaryCard label="Média/dia" value={fmtCompact(avgPerDay)} icon={<Activity className="h-4 w-4" />} tone="muted" />
           <SummaryCard label="A Pagar" value={fmtCompact(aPagar)} icon={<ArrowUpFromLine className="h-4 w-4" />} tone="warning" />
           <SummaryCard label="A Receber" value={fmtCompact(aReceber)} icon={<ArrowDownToLine className="h-4 w-4" />} tone="success" />
-          <SummaryCard label="Média/dia (30d)" value={fmtCompact(avgPerDay)} icon={<Activity className="h-4 w-4" />} tone="muted" />
         </div>
+
+        {/* Saldos por conta (dinâmico) */}
+        {accountBalances.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Saldos por conta</h2>
+              <Link to="/data" className="text-[11px] text-primary hover:underline">Gerenciar</Link>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+              {accountBalances.map(({ account, balance }) => (
+                <SummaryCard
+                  key={account.id}
+                  label={account.name}
+                  value={fmt(balance)}
+                  icon={account.type === "beneficio" ? <Sparkles className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
+                  tone={account.type === "beneficio" ? "benefit" : "primary"}
+                  highlight
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Desktop: 2-col grid (runway+top à esquerda, lista à direita) */}
         <div className="grid gap-5 md:grid-cols-3">
@@ -353,6 +380,7 @@ function DashboardPage() {
                         tx={t}
                         category={categories.find((c) => c.id === t.category_id) ?? null}
                         pm={paymentMethods.find((p) => p.id === t.payment_method_id) ?? null}
+                        account={accounts.find((a) => a.id === t.account_id) ?? null}
                         owner={members.find((m) => m.id === t.profile_id) ?? null}
                         author={members.find((m) => m.id === t.created_by_id) ?? null}
                         hideValues={hideValues}

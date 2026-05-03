@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatBRL, formatCreatedTime, isoToBR, maskedBRL } from "@/lib/format";
-import type { Category, PaymentMethod, Profile, Transaction } from "@/lib/app-context";
+import type { Account, Category, PaymentMethod, Profile, Transaction } from "@/lib/app-context";
 
 interface Props {
   tx: Transaction;
@@ -26,6 +26,7 @@ interface Props {
   pm?: PaymentMethod | null;
   owner?: Profile | null;
   author?: Profile | null;
+  account?: Account | null;
   hideValues: boolean;
   isNew?: boolean;
   selectable?: boolean;
@@ -41,6 +42,7 @@ export function TransactionCard({
   pm,
   owner,
   author,
+  account,
   hideValues,
   isNew,
   selectable,
@@ -112,6 +114,7 @@ export function TransactionCard({
               {isoToBR(tx.date)}
               {category ? ` • ${category.name}` : ""}
               {pm ? ` • ${pm.name}` : ""}
+              {account ? ` • ${account.name}` : ""}
               {tx.recurrence_months > 1
                 ? ` • ${tx.recurrence_index}/${tx.recurrence_months}`
                 : ""}
