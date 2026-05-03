@@ -207,17 +207,37 @@ function DashboardPage() {
         </header>
 
      <main className="w-full space-y-5 px-4 pt-5">
-        {/* 8 CARDS — grid 2 col mobile, 4 col desktop */}
+        {/* Cards de resumo (tipo) */}
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
           <SummaryCard label="Receitas (pagas)" value={fmtCompact(totalReceitasPagas)} icon={<ArrowDownCircle className="h-4 w-4" />} tone="success" />
           <SummaryCard label="Despesas (pagas)" value={fmtCompact(totalDespesasPagas)} icon={<ArrowUpCircle className="h-4 w-4" />} tone="destructive" />
           <SummaryCard label="Investimentos" value={fmtCompact(totalInvestPagas)} icon={<PiggyBank className="h-4 w-4" />} tone="investment" />
-          <SummaryCard label="Saldo Livre" value={fmt(freeBalance)} icon={<Wallet className="h-4 w-4" />} tone="primary" highlight />
-          <SummaryCard label="Saldo Benefícios" value={fmt(benefitBalance)} icon={<Sparkles className="h-4 w-4" />} tone="benefit" highlight />
+          <SummaryCard label="Média/dia" value={fmtCompact(avgPerDay)} icon={<Activity className="h-4 w-4" />} tone="muted" />
           <SummaryCard label="A Pagar" value={fmtCompact(aPagar)} icon={<ArrowUpFromLine className="h-4 w-4" />} tone="warning" />
           <SummaryCard label="A Receber" value={fmtCompact(aReceber)} icon={<ArrowDownToLine className="h-4 w-4" />} tone="success" />
-          <SummaryCard label="Média/dia (30d)" value={fmtCompact(avgPerDay)} icon={<Activity className="h-4 w-4" />} tone="muted" />
         </div>
+
+        {/* Saldos por conta (dinâmico) */}
+        {accountBalances.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Saldos por conta</h2>
+              <Link to="/data" className="text-[11px] text-primary hover:underline">Gerenciar</Link>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+              {accountBalances.map(({ account, balance }) => (
+                <SummaryCard
+                  key={account.id}
+                  label={account.name}
+                  value={fmt(balance)}
+                  icon={account.type === "beneficio" ? <Sparkles className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
+                  tone={account.type === "beneficio" ? "benefit" : "primary"}
+                  highlight
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Desktop: 2-col grid (runway+top à esquerda, lista à direita) */}
         <div className="grid gap-5 md:grid-cols-3">
