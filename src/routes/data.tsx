@@ -106,6 +106,9 @@ function DataPage() {
           <TabsContent value="payment">
             <PaymentSection items={paymentMethods} familyId={family.id} onChange={refresh} />
           </TabsContent>
+          <TabsContent value="account">
+            <AccountSection items={accounts} familyId={family.id} onChange={refresh} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
