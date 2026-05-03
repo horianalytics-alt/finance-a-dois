@@ -380,6 +380,7 @@ function DashboardPage() {
                         tx={t}
                         category={categories.find((c) => c.id === t.category_id) ?? null}
                         pm={paymentMethods.find((p) => p.id === t.payment_method_id) ?? null}
+                        account={accounts.find((a) => a.id === t.account_id) ?? null}
                         owner={members.find((m) => m.id === t.profile_id) ?? null}
                         author={members.find((m) => m.id === t.created_by_id) ?? null}
                         hideValues={hideValues}
