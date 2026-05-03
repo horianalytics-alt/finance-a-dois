@@ -26,6 +26,7 @@ interface Props {
   pm?: PaymentMethod | null;
   owner?: Profile | null;
   author?: Profile | null;
+  account?: Account | null;
   hideValues: boolean;
   isNew?: boolean;
   selectable?: boolean;
