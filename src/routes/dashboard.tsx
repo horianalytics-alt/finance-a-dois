@@ -58,16 +58,14 @@ function DashboardPage() {
     [transactions, activeMonth],
   );
 
-  // ===== 8 CARDS — somas em precisão decimal (Number sobre numeric do PG) =====
+  // ===== Somas mensais =====
   const sumBy = (
     list: Transaction[],
     type: Transaction["type"],
-    isBenefit?: boolean,
     paid?: boolean,
   ) =>
     list
       .filter((t) => t.type === type)
-      .filter((t) => (isBenefit === undefined ? true : t.is_benefit === isBenefit))
       .filter((t) => (paid === undefined ? true : t.is_paid === paid))
       .reduce((s, t) => s + Number(t.amount), 0);
 
@@ -76,13 +74,22 @@ function DashboardPage() {
   const totalDespesasPagas = sumBy(monthPaid, "despesa");
   const totalInvestPagas = sumBy(monthPaid, "investimento");
 
-  const benefitBalance =
-    sumBy(monthPaid, "receita", true) - sumBy(monthPaid, "despesa", true);
-  const freeBalance =
-    sumBy(monthPaid, "receita", false) - sumBy(monthPaid, "despesa", false);
+  // Saldo por conta (dinâmico)
+  const accountBalances = useMemo(() => {
+    return accounts.map((a) => {
+      const txs = monthPaid.filter((t) => t.account_id === a.id);
+      const receita = txs.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+      const despesa = txs.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+      return { account: a, balance: receita - despesa };
+    });
+  }, [accounts, monthPaid]);
 
-  const aPagar = sumBy(monthTx, "despesa", undefined, false);
-  const aReceber = sumBy(monthTx, "receita", undefined, false);
+  const freeBalance = accountBalances
+    .filter((b) => b.account.type === "corrente")
+    .reduce((s, b) => s + b.balance, 0);
+
+  const aPagar = sumBy(monthTx, "despesa", false);
+  const aReceber = sumBy(monthTx, "receita", false);
 
   const today = todayISO();
   const [activeY, activeM] = activeMonth.split("-").map(Number);
