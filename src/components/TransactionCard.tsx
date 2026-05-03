@@ -114,6 +114,7 @@ export function TransactionCard({
               {isoToBR(tx.date)}
               {category ? ` • ${category.name}` : ""}
               {pm ? ` • ${pm.name}` : ""}
+              {account ? ` • ${account.name}` : ""}
               {tx.recurrence_months > 1
                 ? ` • ${tx.recurrence_index}/${tx.recurrence_months}`
                 : ""}
