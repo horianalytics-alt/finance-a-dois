@@ -29,7 +29,7 @@ export const Route = createFileRoute("/data")({
 });
 
 function DataPage() {
-  const { activeProfile, family, categories, paymentMethods, refresh, loading } = useApp();
+  const { activeProfile, family, categories, paymentMethods, accounts, refresh, loading } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
