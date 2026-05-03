@@ -42,6 +42,7 @@ export function TransactionCard({
   pm,
   owner,
   author,
+  account,
   hideValues,
   isNew,
   selectable,
