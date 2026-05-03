@@ -447,3 +447,187 @@ function PaymentSection({
     </Card>
   );
 }
+
+// ====================== ACCOUNT SECTION ======================
+function AccountSection({
+  items,
+  familyId,
+  onChange,
+}: {
+  items: Account[];
+  familyId: string;
+  onChange: () => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState<AccountType>("corrente");
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editType, setEditType] = useState<AccountType>("corrente");
+
+  const handleAdd = async () => {
+    if (!name.trim()) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("accounts").insert({
+        family_id: familyId,
+        name: name.trim(),
+        type,
+        sort_order: items.length,
+      });
+      if (error) throw error;
+      toast.success("Conta adicionada");
+      setName("");
+      await onChange();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveEdit = async (a: Account) => {
+    if (!editName.trim()) {
+      setEditing(null);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .update({ name: editName.trim(), type: editType })
+        .eq("id", a.id);
+      if (error) throw error;
+      toast.success("Atualizada");
+      setEditing(null);
+      await onChange();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Excluir esta conta? Transações vinculadas precisam ser remanejadas antes.")) return;
+    try {
+      const { error } = await supabase.from("accounts").delete().eq("id", id);
+      if (error) throw error;
+      await onChange();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro (talvez existam transações vinculadas)");
+    }
+  };
+
+  const move = async (a: Account, dir: -1 | 1) => {
+    const idx = items.findIndex((x) => x.id === a.id);
+    const swapWith = items[idx + dir];
+    if (!swapWith) return;
+    try {
+      await Promise.all([
+        supabase.from("accounts").update({ sort_order: swapWith.sort_order }).eq("id", a.id),
+        supabase.from("accounts").update({ sort_order: a.sort_order }).eq("id", swapWith.id),
+      ]);
+      await onChange();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-4">
+        <div className="flex items-center gap-2">
+          <Wallet className="h-4 w-4 text-primary" />
+          <p className="text-sm font-semibold">Contas</p>
+        </div>
+
+        <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nome da conta (ex: Nubank, Cartão Alelo)"
+          />
+          <div className="flex items-center gap-2">
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as AccountType)}
+              className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            >
+              <option value="corrente">Conta Corrente / Cartão</option>
+              <option value="beneficio">Cartão Benefício (VR/VT/etc)</option>
+            </select>
+            <Button onClick={handleAdd} disabled={busy || !name.trim()} size="sm">
+              <Sparkles className="mr-1 h-3.5 w-3.5" />
+              Adicionar
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Contas de tipo <strong>Benefício</strong> aparecem como saldo separado no Dashboard.
+          </p>
+        </div>
+
+        <ul className="space-y-1">
+          {items.length === 0 && (
+            <li className="py-4 text-center text-sm text-muted-foreground">Nenhuma conta cadastrada</li>
+          )}
+          {items.map((a) => (
+            <li key={a.id} className="flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1.5">
+              {editing === a.id ? (
+                <>
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="h-8 flex-1"
+                    autoFocus
+                  />
+                  <select
+                    value={editType}
+                    onChange={(e) => setEditType(e.target.value as AccountType)}
+                    className="h-8 rounded-md border border-border bg-background px-1 text-xs"
+                  >
+                    <option value="corrente">Corrente</option>
+                    <option value="beneficio">Benefício</option>
+                  </select>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveEdit(a)}>
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm">
+                    {a.name}
+                    <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[9px] uppercase text-muted-foreground">
+                      {a.type === "beneficio" ? "Benefício" : "Corrente"}
+                    </span>
+                  </span>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(a, -1)}>
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(a, 1)}>
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => {
+                      setEditing(a.id);
+                      setEditName(a.name);
+                      setEditType(a.type);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDelete(a.id)}>
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
