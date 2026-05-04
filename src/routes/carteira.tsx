@@ -35,7 +35,7 @@ function CarteiraPage() {
         const despesas = paid.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
         const balance = receitas - despesas;
         const usagePct = receitas > 0 ? Math.min(100, Math.round((despesas / receitas) * 100)) : 0;
-        const health =
+        const health: CardProps["health"] =
           receitas === 0 && despesas === 0
             ? "neutral"
             : balance >= 0
