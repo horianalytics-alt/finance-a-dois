@@ -24,7 +24,6 @@ export interface TransactionFormValue {
   payment_method_id: string | null;
   account_id: string;
   is_paid: boolean;
-  is_benefit: boolean;
   recurrence_months: number;
   owner_profile_id: string;
 }
@@ -39,7 +38,6 @@ interface ExtraRow {
   payment_method_id: string | null;
   account_id: string | null;
   is_paid: boolean;
-  is_benefit: boolean;
 }
 
 interface Props {
@@ -80,7 +78,6 @@ export function TransactionForm({
   const [pmId, setPmId] = useState<string | null>(initial?.payment_method_id ?? null);
   const [accountId, setAccountId] = useState<string | null>(defaultAccountId);
   const [isPaid, setIsPaid] = useState(initial?.is_paid ?? true);
-  const [isBenefit, setIsBenefit] = useState(initial?.is_benefit ?? false);
   const [recurrence, setRecurrence] = useState(String(initial?.recurrence_months ?? 1));
   const [ownerId, setOwnerId] = useState<string>(
     initial?.profile_id ?? activeProfile?.id ?? "",
@@ -122,7 +119,6 @@ export function TransactionForm({
         payment_method_id: pmId,
         account_id: accountId,
         is_paid: isPaid,
-        is_benefit: isBenefit,
       },
     ]);
   };
@@ -168,7 +164,6 @@ export function TransactionForm({
       payment_method_id: pmId,
       account_id: accountId,
       is_paid: isPaid,
-      is_benefit: isBenefit,
       recurrence_months: months,
       owner_profile_id: ownerId,
     };
@@ -202,7 +197,6 @@ export function TransactionForm({
         payment_method_id: r.payment_method_id,
         account_id: r.account_id,
         is_paid: r.is_paid,
-        is_benefit: r.is_benefit,
         recurrence_months: 1,
         owner_profile_id: r.owner_profile_id,
       });
@@ -350,15 +344,6 @@ export function TransactionForm({
             <Switch checked={isPaid} onCheckedChange={setIsPaid} />
           </div>
 
-          <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
-            <div>
-              <p className="text-sm font-medium">É benefício?</p>
-              <p className="text-xs text-muted-foreground">
-                Vai para o caixa restrito de benefícios
-              </p>
-            </div>
-            <Switch checked={isBenefit} onCheckedChange={setIsBenefit} />
-          </div>
 
           {/* Recorrência */}
           {!hideRecurrence && (
@@ -461,15 +446,11 @@ export function TransactionForm({
                         onChange={(v) => updateExtra(row.id, { payment_method_id: v })}
                         placeholder="Forma de pagamento"
                       />
-                      {/* Toggles Pago + Benefício */}
+                      {/* Toggle Pago */}
                       <div className="flex items-center gap-4">
                         <label className="flex items-center gap-1.5 text-xs">
                           <Switch checked={row.is_paid} onCheckedChange={(v) => updateExtra(row.id, { is_paid: v })} />
                           Pago?
-                        </label>
-                        <label className="flex items-center gap-1.5 text-xs">
-                          <Switch checked={row.is_benefit} onCheckedChange={(v) => updateExtra(row.id, { is_benefit: v })} />
-                          Benefício?
                         </label>
                       </div>
                       {members.length > 1 && (
