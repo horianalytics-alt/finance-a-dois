@@ -1,7 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BarChart3, Database, Download, Settings, LayoutDashboard,
-  Plus, Eye, EyeOff,
+  Plus, Eye, EyeOff, CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
@@ -10,6 +10,7 @@ import { PaletteSwitcher } from "@/components/PaletteSwitcher";
 
 const NAV_ITEMS = [
   { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
+  { to: "/carteira" as const, label: "Carteira", icon: CreditCard },
   { to: "/analytics" as const, label: "Análise", icon: BarChart3 },
   { to: "/transaction/new" as const, label: "Nova Transação", icon: Plus },
   { to: "/data" as const, label: "Dados", icon: Database },
