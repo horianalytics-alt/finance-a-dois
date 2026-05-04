@@ -79,7 +79,6 @@ export type Transaction = {
   category_id: string | null;
   payment_method_id: string | null;
   is_paid: boolean;
-  is_benefit: boolean;
   recurrence_months: number;
   recurrence_index: number;
   recurrence_parent_id: string | null;

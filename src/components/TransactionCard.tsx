@@ -64,7 +64,7 @@ export function TransactionCard({
 
   const borderColor = isNew
     ? "var(--warning)"
-    : tx.is_benefit
+    : account?.type === "beneficio"
       ? "var(--benefit)"
       : tx.type === "receita"
         ? "var(--success)"
@@ -125,7 +125,7 @@ export function TransactionCard({
                   Pendente
                 </span>
               )}
-              {tx.is_benefit && (
+              {account?.type === "beneficio" && (
                 <span className="rounded-full bg-[color:var(--benefit)]/15 px-1.5 py-0.5 text-[9px] font-medium text-[color:var(--benefit)]">
                   Benefício
                 </span>

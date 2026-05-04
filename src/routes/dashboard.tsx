@@ -9,7 +9,7 @@ import {
   Eye, EyeOff, Settings, Plus, Download, TrendingUp, Sparkles, Wallet,
   ArrowDownCircle, ArrowUpCircle, Activity, PiggyBank, Calendar,
   ArrowDownToLine, ArrowUpFromLine, TrendingDown, Database, Trash2, CheckSquare, Square,
-  BarChart3,
+  BarChart3, CreditCard,
 } from "lucide-react";
 import {
   formatBRL, formatBRLCompact, maskedBRL, monthKeyFromISO, todayISO,
@@ -73,6 +73,8 @@ function DashboardPage() {
   const totalReceitasPagas = sumBy(monthPaid, "receita");
   const totalDespesasPagas = sumBy(monthPaid, "despesa");
   const totalInvestPagas = sumBy(monthPaid, "investimento");
+  const totalReceitas = sumBy(monthTx, "receita");
+  const totalDespesas = sumBy(monthTx, "despesa");
 
   // Saldo por conta (dinâmico)
   const accountBalances = useMemo(() => {
@@ -195,6 +197,7 @@ function DashboardPage() {
               </div>
               <div className="lg:hidden flex items-center gap-0.5">
                 <Link to="/analytics"><Button variant="ghost" size="icon"><BarChart3 className="h-5 w-5" /></Button></Link>
+                <Link to="/carteira"><Button variant="ghost" size="icon"><CreditCard className="h-5 w-5" /></Button></Link>
                 <Link to="/data"><Button variant="ghost" size="icon"><Database className="h-5 w-5" /></Button></Link>
                 <Link to="/export"><Button variant="ghost" size="icon"><Download className="h-5 w-5" /></Button></Link>
                 <Link to="/settings"><Button variant="ghost" size="icon"><Settings className="h-5 w-5" /></Button></Link>
@@ -209,6 +212,8 @@ function DashboardPage() {
      <main className="w-full space-y-5 px-4 pt-5">
         {/* Cards de resumo (tipo) */}
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+          <SummaryCard label="Receitas Totais" value={fmtCompact(totalReceitas)} icon={<ArrowDownCircle className="h-4 w-4" />} tone="success" />
+          <SummaryCard label="Despesas Totais" value={fmtCompact(totalDespesas)} icon={<ArrowUpCircle className="h-4 w-4" />} tone="destructive" />
           <SummaryCard label="Receitas (pagas)" value={fmtCompact(totalReceitasPagas)} icon={<ArrowDownCircle className="h-4 w-4" />} tone="success" />
           <SummaryCard label="Despesas (pagas)" value={fmtCompact(totalDespesasPagas)} icon={<ArrowUpCircle className="h-4 w-4" />} tone="destructive" />
           <SummaryCard label="Investimentos" value={fmtCompact(totalInvestPagas)} icon={<PiggyBank className="h-4 w-4" />} tone="investment" />
