@@ -98,6 +98,9 @@ function CarteiraPage() {
               {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </Button>
           </div>
+          <div className="border-t bg-background/60 px-4 py-2">
+            <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-3xl space-y-5 px-4 pt-5">
@@ -110,7 +113,10 @@ function CarteiraPage() {
               </CardContent>
             </Card>
           ) : (
-            cards.map((c) => <AccountCard key={c.account.id} {...c} fmt={fmt} />)
+            <>
+              {cards.map((c) => <AccountCard key={c.account.id} {...c} fmt={fmt} />)}
+              {benefitKpi.hasBenefitAcc && <BenefitEfficiencyCard kpi={benefitKpi} fmt={fmt} />}
+            </>
           )}
         </main>
       </div>
