@@ -22,18 +22,25 @@ function CarteiraPage() {
   const { loading, accounts, transactions, hideValues, toggleHideValues, needsOnboarding, activeProfile } = useApp();
   const navigate = useNavigate();
 
+  const [activeMonth, setActiveMonth] = useState<string>(() => monthKeyFromISO(todayISO()));
+
   useEffect(() => {
     if (authLoading) return;
     if (!session) navigate({ to: "/auth" });
     else if (needsOnboarding) navigate({ to: "/onboarding" });
   }, [session, authLoading, needsOnboarding, navigate]);
 
+  const monthTx = useMemo(
+    () => transactions.filter((t) => monthKeyFromISO(t.date) === activeMonth),
+    [transactions, activeMonth],
+  );
+
   const cards = useMemo(() => {
     return accounts
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((account) => {
-        const txs = transactions.filter((t) => t.account_id === account.id);
+        const txs = monthTx.filter((t) => t.account_id === account.id);
         const paid = txs.filter((t) => t.is_paid);
         const receitas = paid.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
         const despesas = paid.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
@@ -53,7 +60,20 @@ function CarteiraPage() {
           .slice(0, 5);
         return { account, balance, receitas, despesas, usagePct, health, recent };
       });
-  }, [accounts, transactions]);
+  }, [accounts, monthTx]);
+
+  // ===== KPI: Eficiência de Benefício (analítico, baseado em is_benefit) =====
+  const benefitKpi = useMemo(() => {
+    const benefitAcc = accounts.find((a) => a.type === "beneficio");
+    const benefitDesp = monthTx.filter((t) => t.type === "despesa" && t.is_benefit);
+    const total = benefitDesp.reduce((s, t) => s + Number(t.amount), 0);
+    const viaBenefit = benefitAcc
+      ? benefitDesp.filter((t) => t.account_id === benefitAcc.id).reduce((s, t) => s + Number(t.amount), 0)
+      : 0;
+    const ownPocket = total - viaBenefit;
+    const efficiency = total > 0 ? (viaBenefit / total) * 100 : 100;
+    return { total, viaBenefit, ownPocket, efficiency, hasBenefitAcc: !!benefitAcc };
+  }, [monthTx, accounts]);
 
   const fmt = (n: number) => (hideValues ? maskedBRL() : formatBRL(n));
 
