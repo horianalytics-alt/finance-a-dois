@@ -84,6 +84,7 @@ export function TransactionForm({
   const [ownerId, setOwnerId] = useState<string>(
     initial?.profile_id ?? activeProfile?.id ?? "",
   );
+  const [isBenefit, setIsBenefit] = useState<boolean>(initial?.is_benefit ?? false);
   const [extras, setExtras] = useState<ExtraRow[]>([]);
 
   // Quando muda type, limpa categoria se não for compatível
@@ -121,6 +122,7 @@ export function TransactionForm({
         payment_method_id: pmId,
         account_id: accountId,
         is_paid: isPaid,
+        is_benefit: isBenefit,
       },
     ]);
   };
@@ -166,6 +168,7 @@ export function TransactionForm({
       payment_method_id: pmId,
       account_id: accountId,
       is_paid: isPaid,
+      is_benefit: isBenefit,
       recurrence_months: months,
       owner_profile_id: ownerId,
     };
@@ -199,6 +202,7 @@ export function TransactionForm({
         payment_method_id: r.payment_method_id,
         account_id: r.account_id,
         is_paid: r.is_paid,
+        is_benefit: r.is_benefit,
         recurrence_months: 1,
         owner_profile_id: r.owner_profile_id,
       });
