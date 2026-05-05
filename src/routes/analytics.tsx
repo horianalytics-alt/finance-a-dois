@@ -40,11 +40,18 @@ function AnalyticsPage() {
   }, [session, authLoading, needsOnboarding, navigate]);
 
   const [activeMonth, setActiveMonth] = useState(() => monthKeyFromISO(todayISO()));
+  const [accountFilter, setAccountFilter] = useState<string>("all"); // account.id | "all"
+  const [natureFilter, setNatureFilter] = useState<"all" | "benefit" | "personal">("all");
 
-  const monthTx = useMemo(
-    () => transactions.filter((t) => monthKeyFromISO(t.date) === activeMonth),
-    [transactions, activeMonth],
-  );
+  const monthTx = useMemo(() => {
+    return transactions.filter((t) => {
+      if (monthKeyFromISO(t.date) !== activeMonth) return false;
+      if (accountFilter !== "all" && t.account_id !== accountFilter) return false;
+      if (natureFilter === "benefit" && !t.is_benefit) return false;
+      if (natureFilter === "personal" && t.is_benefit) return false;
+      return true;
+    });
+  }, [transactions, activeMonth, accountFilter, natureFilter]);
 
   // ===== Gastos por categoria (donut) =====
   const categoryData = useMemo(() => {
