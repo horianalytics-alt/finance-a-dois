@@ -462,11 +462,15 @@ export function TransactionForm({
                         onChange={(v) => updateExtra(row.id, { payment_method_id: v })}
                         placeholder="Forma de pagamento"
                       />
-                      {/* Toggle Pago */}
-                      <div className="flex items-center gap-4">
+                      {/* Toggles */}
+                      <div className="flex flex-wrap items-center gap-4">
                         <label className="flex items-center gap-1.5 text-xs">
                           <Switch checked={row.is_paid} onCheckedChange={(v) => updateExtra(row.id, { is_paid: v })} />
                           Pago?
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs">
+                          <Switch checked={row.is_benefit} onCheckedChange={(v) => updateExtra(row.id, { is_benefit: v })} />
+                          Benefício?
                         </label>
                       </div>
                       {members.length > 1 && (
