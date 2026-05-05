@@ -257,3 +257,87 @@ function AccountCard({ account, balance, receitas, despesas, usagePct, health, r
     </Card>
   );
 }
+
+interface BenefitKpi {
+  total: number;
+  viaBenefit: number;
+  ownPocket: number;
+  efficiency: number;
+  hasBenefitAcc: boolean;
+}
+
+function BenefitEfficiencyCard({ kpi, fmt }: { kpi: BenefitKpi; fmt: (n: number) => string }) {
+  const { total, viaBenefit, ownPocket, efficiency } = kpi;
+  const status: "great" | "ok" | "bad" = efficiency >= 80 ? "great" : efficiency >= 50 ? "ok" : "bad";
+  const tone = {
+    great: { border: "border-[color:var(--success)]/40", bg: "bg-[color:var(--success)]/5", icon: <CheckCircle2 className="h-5 w-5 text-[color:var(--success)]" />, text: "text-[color:var(--success)]", msg: "Ótimo — o cartão de benefício está cobrindo bem." },
+    ok:    { border: "border-[color:var(--warning)]/40", bg: "bg-[color:var(--warning)]/5", icon: <AlertTriangle className="h-5 w-5 text-[color:var(--warning-foreground)]" />, text: "text-[color:var(--warning-foreground)]", msg: "Atenção — você está bancando parte do benefício." },
+    bad:   { border: "border-destructive/40", bg: "bg-destructive/5", icon: <XCircle className="h-5 w-5 text-destructive" />, text: "text-destructive", msg: "Crítico — mais da metade sai do seu bolso." },
+  }[status];
+  const swilePct = total > 0 ? (viaBenefit / total) * 100 : 0;
+
+  if (total === 0) {
+    return (
+      <Card className={cn("border", tone.border, tone.bg)}>
+        <CardContent className="space-y-2 p-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[color:var(--benefit)]" />
+            <h3 className="text-sm font-semibold">Eficiência de Benefício</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Marque despesas como "Benefício" no formulário para ver quanto está saindo do cartão de benefício vs. do seu bolso.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={cn("border-2", tone.border, tone.bg)}>
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[color:var(--benefit)]" />
+              <h3 className="text-sm font-semibold">Eficiência de Benefício</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Quanto do seu benefício está saindo do cartão certo?
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {tone.icon}
+            <span className={cn("text-2xl font-bold tabular-nums", tone.text)}>
+              {Math.round(efficiency)}%
+            </span>
+          </div>
+        </div>
+
+        <p className={cn("text-xs font-medium", tone.text)}>{tone.msg}</p>
+
+        {/* Barra Swile vs Pix */}
+        <div className="space-y-1">
+          <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-[color:var(--success)] transition-all" style={{ width: `${swilePct}%` }} />
+            <div className="h-full bg-[color:var(--warning)] transition-all" style={{ width: `${100 - swilePct}%` }} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-border bg-card/50 p-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <TrendingUp className="h-3.5 w-3.5 text-[color:var(--success)]" /> Via benefício
+            </div>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-[color:var(--success)]">{fmt(viaBenefit)}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card/50 p-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <TrendingDown className="h-3.5 w-3.5 text-[color:var(--warning-foreground)]" /> Do seu bolso
+            </div>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-[color:var(--warning-foreground)]">{fmt(ownPocket)}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
