@@ -257,6 +257,7 @@ export type Database = {
           description: string
           family_id: string
           id: string
+          is_benefit: boolean
           is_paid: boolean
           paid_date: string | null
           payment_method_id: string | null
@@ -279,6 +280,7 @@ export type Database = {
           description: string
           family_id: string
           id?: string
+          is_benefit?: boolean
           is_paid?: boolean
           paid_date?: string | null
           payment_method_id?: string | null
@@ -301,6 +303,7 @@ export type Database = {
           description?: string
           family_id?: string
           id?: string
+          is_benefit?: boolean
           is_paid?: boolean
           paid_date?: string | null
           payment_method_id?: string | null
