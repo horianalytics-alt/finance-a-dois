@@ -1,13 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useApp, type Account, type Transaction } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, CreditCard, Sparkles, Wallet, TrendingUp, TrendingDown, Eye, EyeOff } from "lucide-react";
-import { formatBRL, isoToBR, maskedBRL } from "@/lib/format";
+import {
+  ArrowLeft, CreditCard, Sparkles, Wallet, TrendingUp, TrendingDown,
+  Eye, EyeOff, CheckCircle2, AlertTriangle, XCircle,
+} from "lucide-react";
+import { formatBRL, isoToBR, maskedBRL, monthKeyFromISO, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { MonthNavigator } from "@/components/MonthNavigator";
 
 export const Route = createFileRoute("/carteira")({
   component: CarteiraPage,
