@@ -84,6 +84,7 @@ export type Transaction = {
   recurrence_parent_id: string | null;
   paid_date: string | null;
   account_id: string;
+  is_benefit: boolean;
 };
 
 interface AppContextValue {

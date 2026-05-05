@@ -1,13 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useApp, type Account, type Transaction } from "@/lib/app-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, CreditCard, Sparkles, Wallet, TrendingUp, TrendingDown, Eye, EyeOff } from "lucide-react";
-import { formatBRL, isoToBR, maskedBRL } from "@/lib/format";
+import {
+  ArrowLeft, CreditCard, Sparkles, Wallet, TrendingUp, TrendingDown,
+  Eye, EyeOff, CheckCircle2, AlertTriangle, XCircle,
+} from "lucide-react";
+import { formatBRL, isoToBR, maskedBRL, monthKeyFromISO, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { MonthNavigator } from "@/components/MonthNavigator";
 
 export const Route = createFileRoute("/carteira")({
   component: CarteiraPage,
@@ -18,18 +22,25 @@ function CarteiraPage() {
   const { loading, accounts, transactions, hideValues, toggleHideValues, needsOnboarding, activeProfile } = useApp();
   const navigate = useNavigate();
 
+  const [activeMonth, setActiveMonth] = useState<string>(() => monthKeyFromISO(todayISO()));
+
   useEffect(() => {
     if (authLoading) return;
     if (!session) navigate({ to: "/auth" });
     else if (needsOnboarding) navigate({ to: "/onboarding" });
   }, [session, authLoading, needsOnboarding, navigate]);
 
+  const monthTx = useMemo(
+    () => transactions.filter((t) => monthKeyFromISO(t.date) === activeMonth),
+    [transactions, activeMonth],
+  );
+
   const cards = useMemo(() => {
     return accounts
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((account) => {
-        const txs = transactions.filter((t) => t.account_id === account.id);
+        const txs = monthTx.filter((t) => t.account_id === account.id);
         const paid = txs.filter((t) => t.is_paid);
         const receitas = paid.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
         const despesas = paid.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
@@ -49,7 +60,20 @@ function CarteiraPage() {
           .slice(0, 5);
         return { account, balance, receitas, despesas, usagePct, health, recent };
       });
-  }, [accounts, transactions]);
+  }, [accounts, monthTx]);
+
+  // ===== KPI: Eficiência de Benefício (analítico, baseado em is_benefit) =====
+  const benefitKpi = useMemo(() => {
+    const benefitAcc = accounts.find((a) => a.type === "beneficio");
+    const benefitDesp = monthTx.filter((t) => t.type === "despesa" && t.is_benefit);
+    const total = benefitDesp.reduce((s, t) => s + Number(t.amount), 0);
+    const viaBenefit = benefitAcc
+      ? benefitDesp.filter((t) => t.account_id === benefitAcc.id).reduce((s, t) => s + Number(t.amount), 0)
+      : 0;
+    const ownPocket = total - viaBenefit;
+    const efficiency = total > 0 ? (viaBenefit / total) * 100 : 100;
+    return { total, viaBenefit, ownPocket, efficiency, hasBenefitAcc: !!benefitAcc };
+  }, [monthTx, accounts]);
 
   const fmt = (n: number) => (hideValues ? maskedBRL() : formatBRL(n));
 
@@ -74,6 +98,9 @@ function CarteiraPage() {
               {hideValues ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </Button>
           </div>
+          <div className="border-t bg-background/60 px-4 py-2">
+            <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-3xl space-y-5 px-4 pt-5">
@@ -86,7 +113,10 @@ function CarteiraPage() {
               </CardContent>
             </Card>
           ) : (
-            cards.map((c) => <AccountCard key={c.account.id} {...c} fmt={fmt} />)
+            <>
+              {cards.map((c) => <AccountCard key={c.account.id} {...c} fmt={fmt} />)}
+              {benefitKpi.hasBenefitAcc && <BenefitEfficiencyCard kpi={benefitKpi} fmt={fmt} />}
+            </>
           )}
         </main>
       </div>
@@ -222,6 +252,90 @@ function AccountCard({ account, balance, receitas, despesas, usagePct, health, r
               })}
             </ul>
           )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface BenefitKpi {
+  total: number;
+  viaBenefit: number;
+  ownPocket: number;
+  efficiency: number;
+  hasBenefitAcc: boolean;
+}
+
+function BenefitEfficiencyCard({ kpi, fmt }: { kpi: BenefitKpi; fmt: (n: number) => string }) {
+  const { total, viaBenefit, ownPocket, efficiency } = kpi;
+  const status: "great" | "ok" | "bad" = efficiency >= 80 ? "great" : efficiency >= 50 ? "ok" : "bad";
+  const tone = {
+    great: { border: "border-[color:var(--success)]/40", bg: "bg-[color:var(--success)]/5", icon: <CheckCircle2 className="h-5 w-5 text-[color:var(--success)]" />, text: "text-[color:var(--success)]", msg: "Ótimo — o cartão de benefício está cobrindo bem." },
+    ok:    { border: "border-[color:var(--warning)]/40", bg: "bg-[color:var(--warning)]/5", icon: <AlertTriangle className="h-5 w-5 text-[color:var(--warning-foreground)]" />, text: "text-[color:var(--warning-foreground)]", msg: "Atenção — você está bancando parte do benefício." },
+    bad:   { border: "border-destructive/40", bg: "bg-destructive/5", icon: <XCircle className="h-5 w-5 text-destructive" />, text: "text-destructive", msg: "Crítico — mais da metade sai do seu bolso." },
+  }[status];
+  const swilePct = total > 0 ? (viaBenefit / total) * 100 : 0;
+
+  if (total === 0) {
+    return (
+      <Card className={cn("border", tone.border, tone.bg)}>
+        <CardContent className="space-y-2 p-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[color:var(--benefit)]" />
+            <h3 className="text-sm font-semibold">Eficiência de Benefício</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Marque despesas como "Benefício" no formulário para ver quanto está saindo do cartão de benefício vs. do seu bolso.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={cn("border-2", tone.border, tone.bg)}>
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[color:var(--benefit)]" />
+              <h3 className="text-sm font-semibold">Eficiência de Benefício</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Quanto do seu benefício está saindo do cartão certo?
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {tone.icon}
+            <span className={cn("text-2xl font-bold tabular-nums", tone.text)}>
+              {Math.round(efficiency)}%
+            </span>
+          </div>
+        </div>
+
+        <p className={cn("text-xs font-medium", tone.text)}>{tone.msg}</p>
+
+        {/* Barra Swile vs Pix */}
+        <div className="space-y-1">
+          <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-[color:var(--success)] transition-all" style={{ width: `${swilePct}%` }} />
+            <div className="h-full bg-[color:var(--warning)] transition-all" style={{ width: `${100 - swilePct}%` }} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-border bg-card/50 p-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <TrendingUp className="h-3.5 w-3.5 text-[color:var(--success)]" /> Via benefício
+            </div>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-[color:var(--success)]">{fmt(viaBenefit)}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card/50 p-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <TrendingDown className="h-3.5 w-3.5 text-[color:var(--warning-foreground)]" /> Do seu bolso
+            </div>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-[color:var(--warning-foreground)]">{fmt(ownPocket)}</p>
+          </div>
         </div>
       </CardContent>
     </Card>
