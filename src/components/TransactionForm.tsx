@@ -350,6 +350,16 @@ export function TransactionForm({
             <Switch checked={isPaid} onCheckedChange={setIsPaid} />
           </div>
 
+          {/* Natureza analítica (independente da conta) */}
+          <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+            <div>
+              <p className="text-sm font-medium">Natureza: {isBenefit ? "Benefício" : "Pessoal"}</p>
+              <p className="text-xs text-muted-foreground">
+                Marca como gasto de benefício (independente da conta).
+              </p>
+            </div>
+            <Switch checked={isBenefit} onCheckedChange={setIsBenefit} />
+          </div>
 
           {/* Recorrência */}
           {!hideRecurrence && (
