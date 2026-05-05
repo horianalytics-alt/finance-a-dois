@@ -185,6 +185,33 @@ function AnalyticsPage() {
         <div className="border-t bg-background/60 px-4 py-2">
           <MonthNavigator monthKey={activeMonth} onChange={setActiveMonth} />
         </div>
+        <div className="flex flex-wrap items-center gap-2 border-t bg-background/40 px-4 py-2">
+          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="font-medium">Conta:</span>
+            <select
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+              className="rounded-md border border-border bg-card px-2 py-1 text-xs"
+            >
+              <option value="all">Todas</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="font-medium">Natureza:</span>
+            <select
+              value={natureFilter}
+              onChange={(e) => setNatureFilter(e.target.value as typeof natureFilter)}
+              className="rounded-md border border-border bg-card px-2 py-1 text-xs"
+            >
+              <option value="all">Todos</option>
+              <option value="benefit">Benefício</option>
+              <option value="personal">Pessoal</option>
+            </select>
+          </label>
+        </div>
       </header>
 
       <main className="space-y-5 px-4 pt-5 overflow-x-clip">
