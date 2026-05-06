@@ -134,6 +134,9 @@ export function TransactionForm({
         account_id: accountId,
         is_paid: isPaid,
         is_benefit: isBenefit,
+        owner,
+        is_futile: false,
+        futile_label: "",
       },
     ]);
   };
