@@ -65,6 +65,8 @@ export type Account = {
   sort_order: number;
 };
 
+export type TxOwner = "heitor" | "carol" | "casal";
+
 export type Transaction = {
   id: string;
   family_id: string;
@@ -85,6 +87,9 @@ export type Transaction = {
   paid_date: string | null;
   account_id: string;
   is_benefit: boolean;
+  owner: TxOwner;
+  is_futile: boolean;
+  futile_label: string | null;
 };
 
 interface AppContextValue {

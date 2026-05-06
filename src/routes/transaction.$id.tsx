@@ -65,6 +65,9 @@ function EditTransactionPage() {
         account_id: v.account_id,
         is_paid: v.is_paid,
         is_benefit: v.is_benefit,
+        owner: v.owner,
+        is_futile: v.is_futile,
+        futile_label: v.futile_label,
         paid_date: v.paid_date,
         profile_id: v.owner_profile_id,
       };
@@ -77,6 +80,9 @@ function EditTransactionPage() {
           payment_method_id: v.payment_method_id,
           account_id: v.account_id,
           is_benefit: v.is_benefit,
+          owner: v.owner,
+          is_futile: v.is_futile,
+          futile_label: v.futile_label,
           profile_id: v.owner_profile_id,
         };
         // 1) atualiza esta exata (com tudo)

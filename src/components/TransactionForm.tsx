@@ -10,9 +10,12 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, X } from "lucide-react";
 import { useApp, type Transaction, type TxType } from "@/lib/app-context";
+import { useFamilySettings } from "@/lib/use-family-settings";
 import { brToISO, isoToBR, parseBRLInput, todayBR } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+export type TxOwner = "heitor" | "carol" | "casal";
 
 export interface TransactionFormValue {
   date: string; // ISO
@@ -27,6 +30,9 @@ export interface TransactionFormValue {
   is_benefit: boolean;
   recurrence_months: number;
   owner_profile_id: string;
+  owner: TxOwner;
+  is_futile: boolean;
+  futile_label: string | null;
 }
 
 interface ExtraRow {
@@ -40,6 +46,9 @@ interface ExtraRow {
   account_id: string | null;
   is_paid: boolean;
   is_benefit: boolean;
+  owner: TxOwner;
+  is_futile: boolean;
+  futile_label: string;
 }
 
 interface Props {
@@ -64,6 +73,8 @@ export function TransactionForm({
   allowBulk = false,
 }: Props) {
   const { categories, paymentMethods, accounts, members, activeProfile } = useApp();
+  const { settings } = useFamilySettings();
+  const futileLabelText = settings.futile_label || "Bobeiras";
 
   const defaultAccountId = (initial as Partial<Transaction> | undefined)?.account_id ?? null;
 
@@ -85,6 +96,9 @@ export function TransactionForm({
     initial?.profile_id ?? activeProfile?.id ?? "",
   );
   const [isBenefit, setIsBenefit] = useState<boolean>(initial?.is_benefit ?? false);
+  const [owner, setOwner] = useState<TxOwner>((initial?.owner as TxOwner) ?? "casal");
+  const [isFutile, setIsFutile] = useState<boolean>(initial?.is_futile ?? false);
+  const [futileLabel, setFutileLabel] = useState<string>(initial?.futile_label ?? "");
   const [extras, setExtras] = useState<ExtraRow[]>([]);
 
   // Quando muda type, limpa categoria se não for compatível
@@ -123,6 +137,9 @@ export function TransactionForm({
         account_id: accountId,
         is_paid: isPaid,
         is_benefit: isBenefit,
+        owner,
+        is_futile: false,
+        futile_label: "",
       },
     ]);
   };
@@ -171,6 +188,9 @@ export function TransactionForm({
       is_benefit: isBenefit,
       recurrence_months: months,
       owner_profile_id: ownerId,
+      owner,
+      is_futile: isFutile,
+      futile_label: isFutile ? (futileLabel.trim() || null) : null,
     };
 
     const all: TransactionFormValue[] = [main];
@@ -205,6 +225,9 @@ export function TransactionForm({
         is_benefit: r.is_benefit,
         recurrence_months: 1,
         owner_profile_id: r.owner_profile_id,
+        owner: r.owner,
+        is_futile: r.is_futile,
+        futile_label: r.is_futile ? (r.futile_label.trim() || null) : null,
       });
     }
 
@@ -361,7 +384,38 @@ export function TransactionForm({
             <Switch checked={isBenefit} onCheckedChange={setIsBenefit} />
           </div>
 
-          {/* Recorrência */}
+          {/* Responsável (Heitor / Carol / Casal) */}
+          <div className="space-y-2">
+            <Label>Responsável</Label>
+            <Tabs value={owner} onValueChange={(v) => setOwner(v as TxOwner)}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="heitor">Heitor</TabsTrigger>
+                <TabsTrigger value="carol">Carol</TabsTrigger>
+                <TabsTrigger value="casal">Casal</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Gasto fútil (rótulo dinâmico) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium">É uma {futileLabelText.toLowerCase()}?</p>
+                <p className="text-xs text-muted-foreground">
+                  Marca como gasto fútil para o simulador de impacto.
+                </p>
+              </div>
+              <Switch checked={isFutile} onCheckedChange={setIsFutile} />
+            </div>
+            {isFutile && (
+              <Input
+                value={futileLabel}
+                onChange={(e) => setFutileLabel(e.target.value.slice(0, 80))}
+                placeholder="Como você chamaria esse gasto? (opcional)"
+                maxLength={80}
+              />
+            )}
+          </div>
           {!hideRecurrence && (
             <div className="space-y-2">
               <Label htmlFor="rec">Recorrência (meses)</Label>
