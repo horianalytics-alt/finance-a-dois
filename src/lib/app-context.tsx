@@ -85,7 +85,12 @@ export type Transaction = {
   paid_date: string | null;
   account_id: string;
   is_benefit: boolean;
+  owner: TxOwner;
+  is_futile: boolean;
+  futile_label: string | null;
 };
+
+export type TxOwner = "heitor" | "carol" | "casal";
 
 interface AppContextValue {
   loading: boolean;
