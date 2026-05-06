@@ -93,6 +93,9 @@ export function TransactionForm({
     initial?.profile_id ?? activeProfile?.id ?? "",
   );
   const [isBenefit, setIsBenefit] = useState<boolean>(initial?.is_benefit ?? false);
+  const [owner, setOwner] = useState<TxOwner>((initial?.owner as TxOwner) ?? "casal");
+  const [isFutile, setIsFutile] = useState<boolean>(initial?.is_futile ?? false);
+  const [futileLabel, setFutileLabel] = useState<string>(initial?.futile_label ?? "");
   const [extras, setExtras] = useState<ExtraRow[]>([]);
 
   // Quando muda type, limpa categoria se não for compatível
