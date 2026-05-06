@@ -384,7 +384,38 @@ export function TransactionForm({
             <Switch checked={isBenefit} onCheckedChange={setIsBenefit} />
           </div>
 
-          {/* Recorrência */}
+          {/* Responsável (Heitor / Carol / Casal) */}
+          <div className="space-y-2">
+            <Label>Responsável</Label>
+            <Tabs value={owner} onValueChange={(v) => setOwner(v as TxOwner)}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="heitor">Heitor</TabsTrigger>
+                <TabsTrigger value="carol">Carol</TabsTrigger>
+                <TabsTrigger value="casal">Casal</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Gasto fútil (rótulo dinâmico) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium">É uma {futileLabelText.toLowerCase()}?</p>
+                <p className="text-xs text-muted-foreground">
+                  Marca como gasto fútil para o simulador de impacto.
+                </p>
+              </div>
+              <Switch checked={isFutile} onCheckedChange={setIsFutile} />
+            </div>
+            {isFutile && (
+              <Input
+                value={futileLabel}
+                onChange={(e) => setFutileLabel(e.target.value.slice(0, 80))}
+                placeholder="Como você chamaria esse gasto? (opcional)"
+                maxLength={80}
+              />
+            )}
+          </div>
           {!hideRecurrence && (
             <div className="space-y-2">
               <Label htmlFor="rec">Recorrência (meses)</Label>
