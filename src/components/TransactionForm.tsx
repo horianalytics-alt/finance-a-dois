@@ -14,6 +14,8 @@ import { brToISO, isoToBR, parseBRLInput, todayBR } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+export type TxOwner = "heitor" | "carol" | "casal";
+
 export interface TransactionFormValue {
   date: string; // ISO
   type: TxType;
@@ -27,6 +29,9 @@ export interface TransactionFormValue {
   is_benefit: boolean;
   recurrence_months: number;
   owner_profile_id: string;
+  owner: TxOwner;
+  is_futile: boolean;
+  futile_label: string | null;
 }
 
 interface ExtraRow {
@@ -40,6 +45,9 @@ interface ExtraRow {
   account_id: string | null;
   is_paid: boolean;
   is_benefit: boolean;
+  owner: TxOwner;
+  is_futile: boolean;
+  futile_label: string;
 }
 
 interface Props {
