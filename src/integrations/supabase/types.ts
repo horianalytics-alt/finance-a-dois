@@ -29,6 +29,44 @@ export type Database = {
         }
         Relationships: []
       }
+      account_goals: {
+        Row: {
+          account_id: string
+          created_at: string
+          family_id: string
+          goal_amount: number
+          id: string
+          month: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          family_id: string
+          goal_amount?: number
+          id?: string
+          month: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          family_id?: string
+          goal_amount?: number
+          id?: string
+          month?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           created_at: string
@@ -97,6 +135,44 @@ export type Database = {
           },
         ]
       }
+      category_budgets: {
+        Row: {
+          budget: number
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          month: string
+          updated_at: string
+        }
+        Insert: {
+          budget?: number
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          month: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: number
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          month?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           code: string
@@ -112,6 +188,27 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+        }
+        Relationships: []
+      }
+      family_settings: {
+        Row: {
+          family_id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          family_id: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          family_id?: string
+          key?: string
+          updated_at?: string
+          value?: string
         }
         Relationships: []
       }
@@ -256,9 +353,12 @@ export type Database = {
           date: string
           description: string
           family_id: string
+          futile_label: string | null
           id: string
           is_benefit: boolean
+          is_futile: boolean
           is_paid: boolean
+          owner: string
           paid_date: string | null
           payment_method_id: string | null
           profile_id: string
@@ -279,9 +379,12 @@ export type Database = {
           date: string
           description: string
           family_id: string
+          futile_label?: string | null
           id?: string
           is_benefit?: boolean
+          is_futile?: boolean
           is_paid?: boolean
+          owner?: string
           paid_date?: string | null
           payment_method_id?: string | null
           profile_id: string
@@ -302,9 +405,12 @@ export type Database = {
           date?: string
           description?: string
           family_id?: string
+          futile_label?: string | null
           id?: string
           is_benefit?: boolean
+          is_futile?: boolean
           is_paid?: boolean
+          owner?: string
           paid_date?: string | null
           payment_method_id?: string | null
           profile_id?: string
