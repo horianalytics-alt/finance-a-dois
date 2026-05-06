@@ -73,6 +73,8 @@ export function TransactionForm({
   allowBulk = false,
 }: Props) {
   const { categories, paymentMethods, accounts, members, activeProfile } = useApp();
+  const { settings } = useFamilySettings();
+  const futileLabelText = settings.futile_label || "Bobeiras";
 
   const defaultAccountId = (initial as Partial<Transaction> | undefined)?.account_id ?? null;
 
