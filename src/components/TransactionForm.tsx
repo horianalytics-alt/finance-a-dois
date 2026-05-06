@@ -185,6 +185,9 @@ export function TransactionForm({
       is_benefit: isBenefit,
       recurrence_months: months,
       owner_profile_id: ownerId,
+      owner,
+      is_futile: isFutile,
+      futile_label: isFutile ? (futileLabel.trim() || null) : null,
     };
 
     const all: TransactionFormValue[] = [main];
