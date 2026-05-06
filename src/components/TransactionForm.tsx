@@ -222,6 +222,9 @@ export function TransactionForm({
         is_benefit: r.is_benefit,
         recurrence_months: 1,
         owner_profile_id: r.owner_profile_id,
+        owner: r.owner,
+        is_futile: r.is_futile,
+        futile_label: r.is_futile ? (r.futile_label.trim() || null) : null,
       });
     }
 
