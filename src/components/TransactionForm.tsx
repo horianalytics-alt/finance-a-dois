@@ -10,6 +10,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, X } from "lucide-react";
 import { useApp, type Transaction, type TxType } from "@/lib/app-context";
+import { useFamilySettings } from "@/lib/use-family-settings";
 import { brToISO, isoToBR, parseBRLInput, todayBR } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
