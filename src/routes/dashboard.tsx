@@ -543,3 +543,31 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
     </button>
   );
 }
+
+function MoMItem({
+  label, current, previous, fmt, delta, better,
+}: {
+  label: string;
+  current: number;
+  previous: number;
+  fmt: (n: number) => string;
+  delta: number | null;
+  better: "up" | "down";
+}) {
+  const isUp = (delta ?? 0) > 0;
+  const isGood = delta === null ? null : better === "up" ? isUp : !isUp;
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-base font-bold tabular-nums">{fmt(current)}</p>
+      <p className="text-[11px] text-muted-foreground">
+        ant. {fmt(previous)}
+        {delta !== null && (
+          <span className={cn("ml-1 font-medium", isGood ? "text-[color:var(--success)]" : "text-destructive")}>
+            {isUp ? "▲" : "▼"} {Math.abs(Math.round(delta))}%
+          </span>
+        )}
+      </p>
+    </div>
+  );
+}
