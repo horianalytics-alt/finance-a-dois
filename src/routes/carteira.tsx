@@ -11,6 +11,7 @@ import {
 import { formatBRL, isoToBR, maskedBRL, monthKeyFromISO, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { MonthNavigator } from "@/components/MonthNavigator";
 
 export const Route = createFileRoute("/carteira")({
@@ -120,6 +121,7 @@ function CarteiraPage() {
           )}
         </main>
       </div>
+      <BottomTabBar />
     </>
   );
 }

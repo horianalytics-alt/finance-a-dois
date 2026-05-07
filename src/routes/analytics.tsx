@@ -4,12 +4,16 @@ import { useAuth } from "@/lib/auth-context";
 import { useApp } from "@/lib/app-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft, Wallet, TrendingDown, PieChart as PieChartIcon,
-  TrendingUp, Flame, CalendarDays,
+  TrendingUp, Flame, CalendarDays, Sparkles,
 } from "lucide-react";
-import { formatBRL, monthKeyFromISO, todayISO } from "@/lib/format";
+import { formatBRL, monthKeyFromISO, parseBRLInput, todayISO } from "@/lib/format";
 import { MonthNavigator } from "@/components/MonthNavigator";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { BottomTabBar } from "@/components/BottomTabBar";
+import { useFamilySettings } from "@/lib/use-family-settings";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
@@ -30,7 +34,8 @@ const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function AnalyticsPage() {
   const { session, loading: authLoading } = useAuth();
-  const { loading, activeProfile, members, categories, accounts, transactions, needsOnboarding } = useApp();
+  const { loading, activeProfile, members, categories, accounts, transactions, needsOnboarding, hideValues, toggleHideValues } = useApp();
+  const { settings } = useFamilySettings();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -166,6 +171,24 @@ function AnalyticsPage() {
     return { weeks, byDow, maxCount, dayCount };
   }, [transactions]);
 
+  // ===== Fútil simulator =====
+  const futileMonth = useMemo(() => {
+    return monthTx.filter((t) => t.type === "despesa" && t.is_futile).reduce((s, t) => s + Number(t.amount), 0);
+  }, [monthTx]);
+  const annualFutile = futileMonth * 12;
+  const rates = [
+    { key: "poupanca", label: "Poupança", value: settings.interest_poupanca },
+    { key: "cdi", label: "CDI", value: settings.interest_cdi },
+    { key: "custom", label: settings.interest_custom_label || "Custom", value: settings.interest_custom },
+  ];
+  const projectFV = (monthly: number, annualPct: number, years: number) => {
+    const i = annualPct / 100 / 12;
+    const n = years * 12;
+    if (i === 0) return monthly * n;
+    return monthly * ((Math.pow(1 + i, n) - 1) / i);
+  };
+  const [years, setYears] = useState(5);
+
   const totalDespesasMes = categoryData.reduce((s, d) => s + d.value, 0);
 
   if (authLoading || loading) {
@@ -174,7 +197,9 @@ function AnalyticsPage() {
   if (!activeProfile) return null;
 
   return (
-    <div className="min-h-svh w-full bg-background pb-16">
+    <>
+      <DesktopSidebar hideValues={hideValues} toggleHideValues={toggleHideValues} />
+      <div className="min-h-svh w-full bg-background pb-32 lg:pl-56">
       <header className="sticky top-0 z-30 w-full border-b bg-background/85 backdrop-blur-md">
         <div className="flex items-center gap-2 px-4 py-3">
           <Link to="/dashboard">
@@ -477,7 +502,58 @@ function AnalyticsPage() {
             </p>
           </CardContent>
         </Card>
+        {/* SIMULADOR DE FÚTEIS */}
+        <Card className="border-0 bg-gradient-to-br from-[color:var(--investment)]/15 via-card to-primary/10">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[color:var(--investment)]" />
+              <h2 className="text-sm font-semibold">E se você não gastasse com {settings.futile_label.toLowerCase()}?</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div>
+                <p className="text-[10px] text-muted-foreground">Gasto fútil no mês</p>
+                <p className="text-base font-bold tabular-nums text-destructive">{formatBRL(futileMonth)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">Equivalente anual</p>
+                <p className="text-base font-bold tabular-nums">{formatBRL(annualFutile)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">Investido por</span>
+              <Input
+                type="number"
+                min={1}
+                max={40}
+                value={years}
+                onChange={(e) => {
+                  const v = parseBRLInput(e.target.value);
+                  setYears(Number.isFinite(v) && v > 0 ? Math.min(40, Math.round(v)) : 1);
+                }}
+                className="h-8 w-20"
+              />
+              <span className="text-[11px] text-muted-foreground">anos</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {rates.map((r) => (
+                <div key={r.key} className="rounded-lg border border-border bg-card p-2 text-center">
+                  <p className="text-[10px] text-muted-foreground">{r.label} ({r.value}% a.a.)</p>
+                  <p className="text-sm font-bold tabular-nums text-[color:var(--investment)]">
+                    {formatBRL(projectFV(futileMonth, r.value, years))}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {futileMonth === 0 && (
+              <p className="text-[11px] text-center text-muted-foreground">
+                Marque despesas como "{settings.futile_label}" no formulário para ver o impacto.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </main>
-    </div>
+      </div>
+      <BottomTabBar />
+    </>
   );
 }

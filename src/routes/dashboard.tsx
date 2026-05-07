@@ -21,6 +21,7 @@ import { PaletteSwitcher } from "@/components/PaletteSwitcher";
 import { MonthNavigator } from "@/components/MonthNavigator";
 import { TransactionCard } from "@/components/TransactionCard";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
@@ -117,6 +118,46 @@ function DashboardPage() {
 
   const fmt = (n: number) => (hideValues ? maskedBRL() : formatBRL(n));
   const fmtCompact = (n: number) => (hideValues ? maskedBRL() : formatBRLCompact(n));
+
+  // ===== MoM (mês anterior) =====
+  const prevMonthKey = useMemo(() => {
+    const [y, m] = activeMonth.split("-").map(Number);
+    const py = m === 1 ? y - 1 : y;
+    const pm = m === 1 ? 12 : m - 1;
+    return `${py}-${String(pm).padStart(2, "0")}`;
+  }, [activeMonth]);
+  const prevMonthTx = useMemo(
+    () => transactions.filter((t) => monthKeyFromISO(t.date) === prevMonthKey && t.is_paid),
+    [transactions, prevMonthKey],
+  );
+  const prevReceitas = prevMonthTx.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+  const prevDespesas = prevMonthTx.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+  const deltaPct = (cur: number, prev: number) => (prev > 0 ? ((cur - prev) / prev) * 100 : null);
+
+  // ===== Meta alert (account_goals do mês ativo) =====
+  const [accountGoalsMonth, setAccountGoalsMonth] = useState<{ account_id: string; goal_amount: number }[]>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("account_goals")
+        .select("account_id, goal_amount")
+        .eq("month", activeMonth);
+      if (active && data) setAccountGoalsMonth(data as { account_id: string; goal_amount: number }[]);
+    })();
+    return () => { active = false; };
+  }, [activeMonth]);
+  const goalAlerts = useMemo(() => {
+    return accountGoalsMonth
+      .map((g) => {
+        const acc = accounts.find((a) => a.id === g.account_id);
+        const realized = monthPaid
+          .filter((t) => t.account_id === g.account_id && t.type === "despesa")
+          .reduce((s, t) => s + Number(t.amount), 0);
+        return { account: acc, goal: Number(g.goal_amount), realized };
+      })
+      .filter((r) => r.account && r.goal > 0 && r.realized >= 0.8 * r.goal);
+  }, [accountGoalsMonth, accounts, monthPaid]);
 
   // ===== Filtros =====
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -244,7 +285,44 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* Desktop: 2-col grid (runway+top à esquerda, lista à direita) */}
+        {/* Alertas de meta */}
+        {goalAlerts.length > 0 && (
+          <div className="space-y-2">
+            {goalAlerts.map(({ account, goal, realized }) => {
+              const pct = Math.round((realized / goal) * 100);
+              const over = realized >= goal;
+              return (
+                <div
+                  key={account!.id}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-lg border p-3 text-sm",
+                    over ? "border-destructive/40 bg-destructive/10" : "border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10",
+                  )}
+                >
+                  <span>
+                    <strong>{account!.name}</strong> {over ? "ultrapassou" : "atingiu"} {pct}% da meta
+                  </span>
+                  <Link to="/metas" className="text-xs font-semibold underline">Ver metas</Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Comparativo Mês a Mês */}
+        <Card>
+          <CardContent className="space-y-2 p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Comparativo com mês anterior</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <MoMItem label="Receitas pagas" current={totalReceitasPagas} previous={prevReceitas} fmt={fmt} delta={deltaPct(totalReceitasPagas, prevReceitas)} better="up" />
+              <MoMItem label="Despesas pagas" current={totalDespesasPagas} previous={prevDespesas} fmt={fmt} delta={deltaPct(totalDespesasPagas, prevDespesas)} better="down" />
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-5 md:grid-cols-3">
           <div className="space-y-5 md:col-span-1">
             {/* RUNWAY */}
@@ -405,13 +483,14 @@ function DashboardPage() {
         </div>
       </main>
 
-      <Link to="/transaction/new" className="fixed bottom-6 right-6 z-20"
+      <Link to="/transaction/new" className="fixed bottom-20 right-6 z-30 lg:bottom-6"
         style={{ paddingRight: "max(0px, env(safe-area-inset-right))" }}>
         <Button size="lg" className="h-14 w-14 rounded-full p-0 shadow-lg shadow-primary/30" aria-label="Nova transação">
           <Plus className="h-6 w-6" />
         </Button>
       </Link>
       </div>
+      <BottomTabBar />
     </>
   );
 }
@@ -462,5 +541,33 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       )}>
       {children}
     </button>
+  );
+}
+
+function MoMItem({
+  label, current, previous, fmt, delta, better,
+}: {
+  label: string;
+  current: number;
+  previous: number;
+  fmt: (n: number) => string;
+  delta: number | null;
+  better: "up" | "down";
+}) {
+  const isUp = (delta ?? 0) > 0;
+  const isGood = delta === null ? null : better === "up" ? isUp : !isUp;
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-base font-bold tabular-nums">{fmt(current)}</p>
+      <p className="text-[11px] text-muted-foreground">
+        ant. {fmt(previous)}
+        {delta !== null && (
+          <span className={cn("ml-1 font-medium", isGood ? "text-[color:var(--success)]" : "text-destructive")}>
+            {isUp ? "▲" : "▼"} {Math.abs(Math.round(delta))}%
+          </span>
+        )}
+      </p>
+    </div>
   );
 }
