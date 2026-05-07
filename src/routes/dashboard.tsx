@@ -119,6 +119,46 @@ function DashboardPage() {
   const fmt = (n: number) => (hideValues ? maskedBRL() : formatBRL(n));
   const fmtCompact = (n: number) => (hideValues ? maskedBRL() : formatBRLCompact(n));
 
+  // ===== MoM (mês anterior) =====
+  const prevMonthKey = useMemo(() => {
+    const [y, m] = activeMonth.split("-").map(Number);
+    const py = m === 1 ? y - 1 : y;
+    const pm = m === 1 ? 12 : m - 1;
+    return `${py}-${String(pm).padStart(2, "0")}`;
+  }, [activeMonth]);
+  const prevMonthTx = useMemo(
+    () => transactions.filter((t) => monthKeyFromISO(t.date) === prevMonthKey && t.is_paid),
+    [transactions, prevMonthKey],
+  );
+  const prevReceitas = prevMonthTx.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+  const prevDespesas = prevMonthTx.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+  const deltaPct = (cur: number, prev: number) => (prev > 0 ? ((cur - prev) / prev) * 100 : null);
+
+  // ===== Meta alert (account_goals do mês ativo) =====
+  const [accountGoalsMonth, setAccountGoalsMonth] = useState<{ account_id: string; goal_amount: number }[]>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("account_goals")
+        .select("account_id, goal_amount")
+        .eq("month", activeMonth);
+      if (active && data) setAccountGoalsMonth(data as { account_id: string; goal_amount: number }[]);
+    })();
+    return () => { active = false; };
+  }, [activeMonth]);
+  const goalAlerts = useMemo(() => {
+    return accountGoalsMonth
+      .map((g) => {
+        const acc = accounts.find((a) => a.id === g.account_id);
+        const realized = monthPaid
+          .filter((t) => t.account_id === g.account_id && t.type === "despesa")
+          .reduce((s, t) => s + Number(t.amount), 0);
+        return { account: acc, goal: Number(g.goal_amount), realized };
+      })
+      .filter((r) => r.account && r.goal > 0 && r.realized >= 0.8 * r.goal);
+  }, [accountGoalsMonth, accounts, monthPaid]);
+
   // ===== Filtros =====
   const [filter, setFilter] = useState<FilterMode>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "receita" | "despesa" | "investimento">("all");
