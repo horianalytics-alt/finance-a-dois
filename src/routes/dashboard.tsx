@@ -405,13 +405,14 @@ function DashboardPage() {
         </div>
       </main>
 
-      <Link to="/transaction/new" className="fixed bottom-6 right-6 z-20"
+      <Link to="/transaction/new" className="fixed bottom-20 right-6 z-30 lg:bottom-6"
         style={{ paddingRight: "max(0px, env(safe-area-inset-right))" }}>
         <Button size="lg" className="h-14 w-14 rounded-full p-0 shadow-lg shadow-primary/30" aria-label="Nova transação">
           <Plus className="h-6 w-6" />
         </Button>
       </Link>
       </div>
+      <BottomTabBar />
     </>
   );
 }
