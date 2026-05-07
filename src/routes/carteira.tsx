@@ -121,6 +121,7 @@ function CarteiraPage() {
           )}
         </main>
       </div>
+      <BottomTabBar />
     </>
   );
 }
