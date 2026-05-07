@@ -1,7 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BarChart3, Database, Download, Settings, LayoutDashboard,
-  Plus, Eye, EyeOff, CreditCard,
+  Plus, Eye, EyeOff, CreditCard, Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
