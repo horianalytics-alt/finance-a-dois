@@ -171,6 +171,24 @@ function AnalyticsPage() {
     return { weeks, byDow, maxCount, dayCount };
   }, [transactions]);
 
+  // ===== Fútil simulator =====
+  const futileMonth = useMemo(() => {
+    return monthTx.filter((t) => t.type === "despesa" && t.is_futile).reduce((s, t) => s + Number(t.amount), 0);
+  }, [monthTx]);
+  const annualFutile = futileMonth * 12;
+  const rates = [
+    { key: "poupanca", label: "Poupança", value: settings.interest_poupanca },
+    { key: "cdi", label: "CDI", value: settings.interest_cdi },
+    { key: "custom", label: settings.interest_custom_label || "Custom", value: settings.interest_custom },
+  ];
+  const projectFV = (monthly: number, annualPct: number, years: number) => {
+    const i = annualPct / 100 / 12;
+    const n = years * 12;
+    if (i === 0) return monthly * n;
+    return monthly * ((Math.pow(1 + i, n) - 1) / i);
+  };
+  const [years, setYears] = useState(5);
+
   const totalDespesasMes = categoryData.reduce((s, d) => s + d.value, 0);
 
   if (authLoading || loading) {
