@@ -34,7 +34,8 @@ const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function AnalyticsPage() {
   const { session, loading: authLoading } = useAuth();
-  const { loading, activeProfile, members, categories, accounts, transactions, needsOnboarding } = useApp();
+  const { loading, activeProfile, members, categories, accounts, transactions, needsOnboarding, hideValues, toggleHideValues } = useApp();
+  const { settings } = useFamilySettings();
   const navigate = useNavigate();
 
   useEffect(() => {
