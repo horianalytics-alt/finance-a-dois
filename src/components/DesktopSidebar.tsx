@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
   { to: "/carteira" as const, label: "Carteira", icon: CreditCard },
   { to: "/analytics" as const, label: "Análise", icon: BarChart3 },
+  { to: "/metas" as const, label: "Metas", icon: Target },
   { to: "/transaction/new" as const, label: "Nova Transação", icon: Plus },
   { to: "/data" as const, label: "Dados", icon: Database },
   { to: "/export" as const, label: "Exportar", icon: Download },
