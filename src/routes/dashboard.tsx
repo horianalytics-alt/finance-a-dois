@@ -285,7 +285,44 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* Desktop: 2-col grid (runway+top à esquerda, lista à direita) */}
+        {/* Alertas de meta */}
+        {goalAlerts.length > 0 && (
+          <div className="space-y-2">
+            {goalAlerts.map(({ account, goal, realized }) => {
+              const pct = Math.round((realized / goal) * 100);
+              const over = realized >= goal;
+              return (
+                <div
+                  key={account!.id}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-lg border p-3 text-sm",
+                    over ? "border-destructive/40 bg-destructive/10" : "border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10",
+                  )}
+                >
+                  <span>
+                    <strong>{account!.name}</strong> {over ? "ultrapassou" : "atingiu"} {pct}% da meta
+                  </span>
+                  <Link to="/metas" className="text-xs font-semibold underline">Ver metas</Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Comparativo Mês a Mês */}
+        <Card>
+          <CardContent className="space-y-2 p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Comparativo com mês anterior</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <MoMItem label="Receitas pagas" current={totalReceitasPagas} previous={prevReceitas} fmt={fmt} delta={deltaPct(totalReceitasPagas, prevReceitas)} better="up" />
+              <MoMItem label="Despesas pagas" current={totalDespesasPagas} previous={prevDespesas} fmt={fmt} delta={deltaPct(totalDespesasPagas, prevDespesas)} better="down" />
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-5 md:grid-cols-3">
           <div className="space-y-5 md:col-span-1">
             {/* RUNWAY */}
