@@ -179,7 +179,9 @@ function AnalyticsPage() {
   if (!activeProfile) return null;
 
   return (
-    <div className="min-h-svh w-full bg-background pb-16">
+    <>
+      <DesktopSidebar hideValues={hideValues} toggleHideValues={toggleHideValues} />
+      <div className="min-h-svh w-full bg-background pb-32 lg:pl-56">
       <header className="sticky top-0 z-30 w-full border-b bg-background/85 backdrop-blur-md">
         <div className="flex items-center gap-2 px-4 py-3">
           <Link to="/dashboard">
