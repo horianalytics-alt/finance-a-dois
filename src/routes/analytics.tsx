@@ -4,12 +4,16 @@ import { useAuth } from "@/lib/auth-context";
 import { useApp } from "@/lib/app-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft, Wallet, TrendingDown, PieChart as PieChartIcon,
-  TrendingUp, Flame, CalendarDays,
+  TrendingUp, Flame, CalendarDays, Sparkles,
 } from "lucide-react";
-import { formatBRL, monthKeyFromISO, todayISO } from "@/lib/format";
+import { formatBRL, monthKeyFromISO, parseBRLInput, todayISO } from "@/lib/format";
 import { MonthNavigator } from "@/components/MonthNavigator";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { BottomTabBar } from "@/components/BottomTabBar";
+import { useFamilySettings } from "@/lib/use-family-settings";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
